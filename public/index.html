@@ -32,7 +32,7 @@
             --player-text: #0f1923;
             
             --font-family: 'Inter', sans-serif;
-            --header-height: 60px;
+            --header-height: 44px;
         }
 
         * {
@@ -66,19 +66,44 @@
             flex-shrink: 0;
         }
 
+        /* Control toggles: overlay strip on top of the field on mobile */
+        .controls-overlay {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            right: 6px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            pointer-events: none;
+        }
+        .controls-overlay > * { pointer-events: all; }
+
+        @media (min-width: 768px) {
+            .controls-overlay {
+                position: static;
+                margin-bottom: 8px;
+            }
+        }
+
         h1 {
-            font-size: 1.2rem;
+            font-size: 1rem;
             font-weight: 600;
             letter-spacing: -0.02em;
+        }
+        @media (min-width: 768px) {
+            h1 { font-size: 1.2rem; }
         }
 
         .phase-toggle {
             display: flex;
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
             border-radius: 20px;
-            padding: 4px;
-            margin-top: 8px;
-            margin-bottom: 12px;
+            padding: 3px;
             align-self: center;
         }
 
@@ -86,13 +111,14 @@
             background: transparent;
             border: none;
             color: var(--text-muted);
-            padding: 6px 16px;
+            padding: 5px 12px;
             border-radius: 16px;
-            font-size: 0.85rem;
+            font-size: 0.78rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
             font-family: inherit;
+            white-space: nowrap;
         }
 
         .phase-btn.active {
@@ -103,19 +129,21 @@
         .set-piece-toggle {
             display: flex;
             justify-content: center;
-            gap: 8px;
-            margin-bottom: 12px;
+            gap: 6px;
         }
 
         .sp-btn {
-            background: rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
             border: 1px solid rgba(255,255,255,0.2);
             color: var(--text-muted);
-            padding: 4px 12px;
+            padding: 3px 10px;
             border-radius: 12px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             cursor: pointer;
             transition: all 0.2s;
+            white-space: nowrap;
         }
 
         .sp-btn.active {
@@ -142,17 +170,16 @@
 
         /* --- Field Area --- */
         .field-container {
-            flex: 1;
+            flex: 3; /* ~75% of remaining height on mobile */
             display: flex;
             flex-direction: column;
-            padding: 1rem;
+            padding: 6px;
             position: relative;
-            max-height: 55vh; /* constrain on mobile so bottom panel fits */
+            min-height: 0;
         }
 
         @media (min-width: 768px) {
             .field-container {
-                max-height: none;
                 flex: 2;
                 padding: 2rem;
             }
@@ -196,8 +223,9 @@
             display: flex;
             flex-direction: column;
             border-top: 1px solid rgba(255,255,255,0.1);
-            flex: 1;
+            flex: 1; /* ~25% of remaining height on mobile */
             overflow-y: auto;
+            min-height: 0;
         }
 
         @media (min-width: 768px) {
@@ -569,19 +597,21 @@
         <h1>Soccer Positioning Engine</h1>
     </header>
     
-    <div class="phase-toggle">
-        <button class="phase-btn active" data-phase="possession">Offense / In Possession</button>
-        <button class="phase-btn" data-phase="defense">Defense / Out of Possession</button>
-    </div>
-    
-    <div class="set-piece-toggle">
-        <button class="sp-btn active" data-sp="none">Open Play</button>
-        <button class="sp-btn" data-sp="free_kick">Free Kick</button>
-        <button class="sp-btn" data-sp="corner_kick">Corner Kick</button>
-    </div>
 
     <main>
         <div class="field-container">
+            <!-- Controls overlay: floats on top of the field on mobile -->
+            <div class="controls-overlay">
+                <div class="phase-toggle">
+                    <button class="phase-btn active" data-phase="possession">Offense / In Possession</button>
+                    <button class="phase-btn" data-phase="defense">Defense / Out of Possession</button>
+                </div>
+                <div class="set-piece-toggle">
+                    <button class="sp-btn active" data-sp="none">Open Play</button>
+                    <button class="sp-btn" data-sp="free_kick">Free Kick</button>
+                    <button class="sp-btn" data-sp="corner_kick">Corner Kick</button>
+                </div>
+            </div>
             <div class="field" id="soccer-field">
                 <!-- Static Field Lines -->
                 <svg class="field-svg" viewBox="0 0 100 150" preserveAspectRatio="none">
