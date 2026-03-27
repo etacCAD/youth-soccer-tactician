@@ -694,6 +694,9 @@
                         <label class="has-ball-toggle" style="margin: 0;">
                             <input type="checkbox" id="toggle-has-ball"> Has Ball
                         </label>
+                        <label class="has-ball-toggle" style="margin: 0;">
+                            <input type="checkbox" id="toggle-opponents" checked> Show Defense
+                        </label>
                     </div>
                     <div class="ball-zone-badge">
                         <div class="ball-icon-small">⚽️</div>
@@ -1017,7 +1020,8 @@
             selectedPosition: 'RW',
             sequence: ['LCB'],
             isReplaying: false,
-            hasBall: false
+            hasBall: false,
+            showOpponents: true
         };
 
         function getDistanceSq(p1, p2) {
@@ -1918,6 +1922,11 @@
                 updateAll();
             };
             
+            document.getElementById('toggle-opponents').onchange = (e) => {
+                state.showOpponents = e.target.checked;
+                updateAll();
+            };
+            
             document.getElementById('btn-reset').onclick = resetSequence;
             document.getElementById('btn-replay').onclick = replaySequence;
         }
@@ -2060,6 +2069,11 @@
             });
 
             oppCoords.forEach(item => {
+                if (!state.showOpponents) {
+                    item.el.style.display = 'none';
+                    return;
+                }
+                item.el.style.display = 'flex';
                 let {x, y} = item.c;
                 x = Math.max(5, Math.min(95, x));
                 y = Math.max(2, Math.min(98, y));
