@@ -624,14 +624,16 @@
                 </div>
                 <div class="set-piece-toggle">
                     <button class="sp-btn active" data-sp="none">Open Play</button>
+                    <button class="sp-btn" data-sp="kick_off">Kick-Off</button>
                     <button class="sp-btn" data-sp="free_kick">Free Kick</button>
                     <button class="sp-btn" data-sp="corner_kick">Corner Kick</button>
                 </div>
                 <div class="play-toggle" id="play-options">
                     <button class="play-btn active" data-play="base">Base</button>
-                    <button class="play-btn" data-play="alphe">Alphe (Short/Dummy)</button>
-                    <button class="play-btn" data-play="betta">Betta (Near Post/Slip)</button>
-                    <button class="play-btn" data-play="kappa">Kappa (Crowd Box/Far Post)</button>
+                    <button class="play-btn" data-play="alphe" id="play-alphe">Alphe (Short/Dummy)</button>
+                    <button class="play-btn" data-play="betta" id="play-betta">Betta (Near Post/Slip)</button>
+                    <button class="play-btn" data-play="kappa" id="play-kappa">Kappa (Crowd Box/Far Post)</button>
+                    <button class="play-btn" data-play="psg" id="play-psg" style="display:none;">PSG Tactic (Long Diagonal)</button>
                 </div>
             </div>
             <div class="field" id="soccer-field">
@@ -932,6 +934,48 @@
             'RW': { x: 75, y: 15 },
         };
 
+        const BASE_KICK_OFF_OFFENSE = {
+            'GK': { x: 50, y: 90 },
+            'LCB': { x: 40, y: 65 },
+            'RCB': { x: 60, y: 65 },
+            'LB': { x: 15, y: 55 },
+            'RB': { x: 85, y: 55 },
+            'CDM': { x: 50, y: 55 },
+            'LCM': { x: 35, y: 52 },
+            'RCM': { x: 65, y: 52 },
+            'LW': { x: 20, y: 50 },
+            'ST': { x: 48, y: 50 },
+            'RW': { x: 80, y: 50 },
+        };
+
+        const BASE_KICK_OFF_DEFENSE = {
+            'GK': { x: 50, y: 96 },
+            'LCB': { x: 40, y: 75 },
+            'RCB': { x: 60, y: 75 },
+            'LB': { x: 20, y: 70 },
+            'RB': { x: 80, y: 70 },
+            'CDM': { x: 50, y: 65 },
+            'LCM': { x: 35, y: 60 },
+            'RCM': { x: 65, y: 60 },
+            'LW': { x: 25, y: 55 },
+            'ST': { x: 50, y: 52 },
+            'RW': { x: 75, y: 55 },
+        };
+
+        const BASE_KICK_OFF_PSG = {
+            'GK': { x: 50, y: 90 },
+            'LCB': { x: 30, y: 65 },
+            'RCB': { x: 70, y: 65 },
+            'LB': { x: 15, y: 55 },
+            'RB': { x: 85, y: 55 },
+            'CDM': { x: 50, y: 70 }, // Deep playmaker
+            'LCM': { x: 35, y: 52 },
+            'RCM': { x: 65, y: 52 },
+            'LW': { x: 5, y: 15 }, // Sprint high
+            'ST': { x: 48, y: 50 },
+            'RW': { x: 95, y: 15 }, // Sprint high
+        };
+
         const state = {
             phase: 'possession',
             setPiece: 'none',
@@ -1015,6 +1059,15 @@
                             else newX += 10;
                         }
                     }
+                } else if (effectiveSetPiece === 'kick_off') {
+                    if (isOffense) {
+                        if (state.setPiecePlay === 'psg') spBase = BASE_KICK_OFF_PSG[pos];
+                        else spBase = BASE_KICK_OFF_OFFENSE[pos];
+                    } else {
+                        spBase = BASE_KICK_OFF_DEFENSE[pos];
+                    }
+                    if (isOffense && pos === ballZone) { return { x: 50, y: 50 }; }
+                    if (!isOffense && pos === getClosestFieldPlayer(BASE_KICK_OFF_DEFENSE, {x:50, y:50})) { return { x: 50, y: 45 }; }
                 } else if (effectiveSetPiece === 'free_kick') {
                     if (isOffense && pos === ballZone) { return { x: bz.x, y: bz.y }; }
                     if (!isOffense) {
@@ -1206,9 +1259,14 @@
 
             // Set Piece Override for Opponents
             if (effectiveSetPieceOpp !== 'none') {
-                let spBase = effectiveSetPieceOpp === 'corner_kick' ? 
-                    (isOppDefense ? BASE_CORNER_DEFENSE[pos] : BASE_CORNER_OFFENSE[pos]) : 
-                    (isOppDefense ? BASE_FREE_KICK_DEFENSE[pos] : BASE_FREE_KICK_OFFENSE[pos]);
+                let spBase;
+                if (effectiveSetPieceOpp === 'corner_kick') {
+                    spBase = isOppDefense ? BASE_CORNER_DEFENSE[pos] : BASE_CORNER_OFFENSE[pos];
+                } else if (effectiveSetPieceOpp === 'kick_off') {
+                    spBase = isOppDefense ? BASE_KICK_OFF_DEFENSE[pos] : BASE_KICK_OFF_OFFENSE[pos];
+                } else {
+                    spBase = isOppDefense ? BASE_FREE_KICK_DEFENSE[pos] : BASE_FREE_KICK_OFFENSE[pos];
+                }
                 
                 // Opponents are mirrored
                 let newX = 100 - spBase.x; 
@@ -1407,11 +1465,11 @@
                         text.ready = "Drive at the fullback 1v1! Look to beat them down the line for a cross, or cut inside to shoot.";
                         text.alert = "Don't just pass backward if you have space. Be aggressive and take them on!";
                     } else if (pos === 'LCM' || pos === 'RCM' || pos === 'CDM') {
-                        text.look = "Scan for runners. Can you slide a through ball between their center backs?";
-                        text.ready = "If there's space, drive forward. If pressure comes, look for a through ball or slip pass.";
+                        text.look = "Scan for runners. Can you play a line-breaking pass between their midfielders or center backs?";
+                        text.ready = "If there's space, drive forward. Look for triangles, diamond shapes, and third-man runs to break them down.";
                     } else if (pos === 'LB' || pos === 'RB') {
-                        if (bz.y < 50) {
-                            text.ready = "Look to deliver an early cross into the box or play your winger down the line.";
+                        if (bz.y < 70) {
+                            text.ready = "Look to deliver an early cross or use a Manchester United-style overlapping run down the line.";
                         }
                     }
 
@@ -1467,9 +1525,9 @@
                         return {
                             where: "Operating in the half-spaces, offering angles to the ball carrier.",
                             look: "Scan forward! Look for the striker's run or wingers making runs in behind.",
-                            ready: "Receive on the half-turn. Be ready to play a penetrating through ball to break their lines.",
+                            ready: "Receive on the half-turn. Form triangles or diamond shapes to offer combination passing options like Y-passing or square passes.",
                             say: "'Turn' if you have space to face forward.",
-                            alert: "Don't play it safe with sideways passes if you have a clear through ball option."
+                            alert: "Don't play it safe with sideways passes if you have a clear line-breaking through ball option."
                         };
                     }
                 }
@@ -1479,7 +1537,7 @@
                         return {
                             where: "Pushing high up the touchline to support the winger.",
                             look: "Watch your winger's movement. Are they cutting inside or staying wide?",
-                            ready: "Make an overlapping run to provide a crossing option or draw a defender away from your winger.",
+                            ready: "Make a Manchester United-style overlapping run to provide a crossing option or draw a defender away from your winger for a 2v1.",
                             say: "'Overlap!' as you sprint past the winger.",
                             alert: "Don't leave your center backs completely exposed. Ensure someone is covering your run."
                         };
@@ -1748,6 +1806,11 @@
             const playOptions = document.getElementById('play-options');
             if (effectiveSetPiece !== 'none' && state.phase === 'possession') {
                 playOptions.style.display = 'flex';
+                const isKickOff = effectiveSetPiece === 'kick_off';
+                document.getElementById('play-alphe').style.display = isKickOff ? 'none' : 'block';
+                document.getElementById('play-betta').style.display = isKickOff ? 'none' : 'block';
+                document.getElementById('play-kappa').style.display = isKickOff ? 'none' : 'block';
+                document.getElementById('play-psg').style.display = isKickOff ? 'block' : 'none';
             } else {
                 playOptions.style.display = 'none';
             }
@@ -2078,51 +2141,13 @@
             renderCard();
         }
 
-        // Override renderCard to check AI panel state
-        const originalRenderCard = renderCard;
-        // Redefine renderCard — if AI panel is open, keep it
-        // (we already defined renderCard above, so we patch updateAll)
         const originalUpdateAll = updateAll;
-        function patchedUpdateAll() {
-            // Update HUD
-            document.getElementById('hud-position').innerText = state.selectedPosition;
-            document.getElementById('hud-ball').innerText = `Ball: ${BALL_ZONES[state.ballZone].label}`;
-
-            // Update Ball Position
-            const ballEl = document.getElementById('the-ball');
-            const ballCoords = BALL_ZONES[state.ballZone];
-            ballEl.style.left = `${ballCoords.x}%`;
-            ballEl.style.top = `${ballCoords.y}%`;
-
-            // Update Player Positions
-            POSITIONS.forEach(pos => {
-                const pEl = document.getElementById(`player-${pos}`);
-                const coords = getPlayerCoords(pos, state.phase, state.ballZone);
-                pEl.style.left = `${coords.x}%`;
-                pEl.style.top = `${coords.y}%`;
-            });
-
-            // Update Opponent Positions
-            POSITIONS.forEach(pos => {
-                const opEl = document.getElementById(`opp-player-${pos}`);
-                const opCoords = getOpponentCoords(pos, state.phase, state.ballZone);
-                opEl.style.left = `${opCoords.x}%`;
-                opEl.style.top = `${opCoords.y}%`;
-            });
-
-            // Hide active ball zone target
-            document.querySelectorAll('.ball-zone-target').forEach(el => el.classList.remove('active'));
-            document.getElementById(`zone-${state.ballZone}`).classList.add('active');
-
-            // Render the right panel
+        updateAll = function() {
+            originalUpdateAll();
             if (isAIPanelOpen && aiAnalysisData) {
                 renderAIPanel();
-            } else {
-                renderCard();
             }
-        }
-        // Replace updateAll
-        updateAll = patchedUpdateAll;
+        };
 
         // Bind AI button
         window.addEventListener('DOMContentLoaded', () => {
