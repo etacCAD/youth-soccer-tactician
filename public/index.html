@@ -142,6 +142,33 @@
             font-weight: 600;
         }
 
+        .play-toggle {
+            display: none;
+            justify-content: center;
+            gap: 4px;
+            margin-left: 8px;
+            padding-left: 8px;
+            border-left: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .play-btn {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(245, 166, 35, 0.3);
+            color: var(--text-muted);
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 0.70rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .play-btn.active {
+            background: rgba(245, 166, 35, 0.2);
+            color: var(--accent);
+            border-color: var(--accent);
+            font-weight: 700;
+        }
+
         /* --- Main Layout --- */
         main {
             display: flex;
@@ -600,6 +627,12 @@
                     <button class="sp-btn" data-sp="free_kick">Free Kick</button>
                     <button class="sp-btn" data-sp="corner_kick">Corner Kick</button>
                 </div>
+                <div class="play-toggle" id="play-options">
+                    <button class="play-btn active" data-play="base">Base</button>
+                    <button class="play-btn" data-play="alphe">Alphe (Short/Dummy)</button>
+                    <button class="play-btn" data-play="betta">Betta (Near Post/Slip)</button>
+                    <button class="play-btn" data-play="kappa">Kappa (Crowd Box/Far Post)</button>
+                </div>
             </div>
             <div class="field" id="soccer-field">
                 <!-- Static Field Lines -->
@@ -815,9 +848,94 @@
             'RW': { x: 80, y: 60 },
         };
 
+        const BASE_CORNER_ALPHE = {
+            'GK': { x: 50, y: 85 },
+            'LCB': { x: 45, y: 10 },
+            'RCB': { x: 55, y: 10 },
+            'LB': { x: 30, y: 45 },
+            'RB': { x: 70, y: 45 },
+            'CDM': { x: 50, y: 20 },
+            'LCM': { x: 25, y: 5 }, // Comes short for 2v1
+            'RCM': { x: 65, y: 15 },
+            'LW': { x: 15, y: 18 }, 
+            'ST': { x: 50, y: 8 },
+            'RW': { x: 85, y: 18 },
+        };
+
+        const BASE_CORNER_BETTA = {
+            'GK': { x: 50, y: 85 },
+            'LCB': { x: 30, y: 8 },  // Near post run
+            'RCB': { x: 55, y: 15 },
+            'LB': { x: 30, y: 45 },
+            'RB': { x: 70, y: 45 },
+            'CDM': { x: 50, y: 20 },
+            'LCM': { x: 35, y: 15 },
+            'RCM': { x: 65, y: 15 },
+            'LW': { x: 15, y: 18 }, 
+            'ST': { x: 20, y: 5 },   // Aggressive near post
+            'RW': { x: 85, y: 18 },
+        };
+
+        const BASE_CORNER_KAPPA = {
+            'GK': { x: 50, y: 85 },
+            'LCB': { x: 45, y: 5 }, // Pack 6 yard box
+            'RCB': { x: 55, y: 5 }, // Pack 6 yard box
+            'LB': { x: 30, y: 45 },
+            'RB': { x: 70, y: 45 },
+            'CDM': { x: 50, y: 12 },
+            'LCM': { x: 35, y: 5 }, // Pack 6 yard box
+            'RCM': { x: 65, y: 5 }, // Pack 6 yard box
+            'LW': { x: 15, y: 10 }, 
+            'ST': { x: 50, y: 2 },  // Crowding GK
+            'RW': { x: 85, y: 10 },
+        };
+
+        const BASE_FK_ALPHE = {
+            'GK': { x: 50, y: 85 },
+            'LCB': { x: 45, y: 30 },
+            'RCB': { x: 55, y: 30 },
+            'LB': { x: 20, y: 50 },
+            'RB': { x: 80, y: 50 },
+            'CDM': { x: 50, y: 40 },
+            'LCM': { x: 48, y: 22 }, // Dummy runner near ball
+            'RCM': { x: 65, y: 35 },
+            'LW': { x: 15, y: 25 },
+            'ST': { x: 50, y: 20 },
+            'RW': { x: 85, y: 25 },
+        };
+
+        const BASE_FK_BETTA = {
+            'GK': { x: 50, y: 85 },
+            'LCB': { x: 45, y: 30 },
+            'RCB': { x: 55, y: 30 },
+            'LB': { x: 10, y: 35 }, // Wide overlapping run left
+            'RB': { x: 90, y: 35 }, // Wide overlapping run right
+            'CDM': { x: 50, y: 40 },
+            'LCM': { x: 35, y: 35 },
+            'RCM': { x: 65, y: 35 },
+            'LW': { x: 15, y: 20 }, // Slip pass target left
+            'ST': { x: 50, y: 20 },
+            'RW': { x: 85, y: 20 }, // Slip pass target right
+        };
+
+        const BASE_FK_KAPPA = {
+            'GK': { x: 50, y: 85 },
+            'LCB': { x: 80, y: 15 }, // Far post overload
+            'RCB': { x: 85, y: 20 }, // Far post overload
+            'LB': { x: 20, y: 50 },
+            'RB': { x: 80, y: 50 },
+            'CDM': { x: 50, y: 40 },
+            'LCM': { x: 35, y: 35 },
+            'RCM': { x: 65, y: 35 },
+            'LW': { x: 15, y: 25 },
+            'ST': { x: 50, y: 20 },
+            'RW': { x: 75, y: 15 },
+        };
+
         const state = {
             phase: 'possession',
             setPiece: 'none',
+            setPiecePlay: 'base',
             ballZone: 'LCB',
             selectedPosition: 'RW',
             sequence: ['LCB'],
@@ -853,9 +971,27 @@
 
             // Set Piece Override
             if (effectiveSetPiece !== 'none') {
-                let spBase = effectiveSetPiece === 'corner_kick' ? 
-                    (isOffense ? BASE_CORNER_OFFENSE[pos] : BASE_CORNER_DEFENSE[pos]) : 
-                    (isOffense ? BASE_FREE_KICK_OFFENSE[pos] : BASE_FREE_KICK_DEFENSE[pos]);
+                let spBase;
+
+                if (effectiveSetPiece === 'corner_kick') {
+                    if (isOffense) {
+                        if (state.setPiecePlay === 'alphe') spBase = BASE_CORNER_ALPHE[pos];
+                        else if (state.setPiecePlay === 'betta') spBase = BASE_CORNER_BETTA[pos];
+                        else if (state.setPiecePlay === 'kappa') spBase = BASE_CORNER_KAPPA[pos];
+                        else spBase = BASE_CORNER_OFFENSE[pos];
+                    } else {
+                        spBase = BASE_CORNER_DEFENSE[pos];
+                    }
+                } else {
+                    if (isOffense) {
+                        if (state.setPiecePlay === 'alphe') spBase = BASE_FK_ALPHE[pos];
+                        else if (state.setPiecePlay === 'betta') spBase = BASE_FK_BETTA[pos];
+                        else if (state.setPiecePlay === 'kappa') spBase = BASE_FK_KAPPA[pos];
+                        else spBase = BASE_FREE_KICK_OFFENSE[pos];
+                    } else {
+                        spBase = BASE_FREE_KICK_DEFENSE[pos];
+                    }
+                }
                 
                 let newX = spBase.x;
                 let newY = spBase.y;
@@ -1531,8 +1667,20 @@
                     document.querySelectorAll('.sp-btn').forEach(b => b.classList.remove('active'));
                     e.target.classList.add('active');
                     state.setPiece = e.target.dataset.sp;
+                    state.setPiecePlay = 'base';
+                    document.querySelectorAll('.play-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelector('.play-btn[data-play="base"]').classList.add('active');
                     updateAll();
                 };
+            });
+
+            document.querySelectorAll('.play-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    document.querySelectorAll('.play-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    state.setPiecePlay = e.target.dataset.play;
+                    updateAll();
+                }
             });
             
             document.getElementById('toggle-has-ball').onchange = (e) => {
@@ -1594,6 +1742,16 @@
         }
 
         function updateAll() {
+            // Manage Play toggle visibility
+            const isCornerBall = CORNER_ZONES.has(state.ballZone);
+            const effectiveSetPiece = isCornerBall ? 'corner_kick' : state.setPiece;
+            const playOptions = document.getElementById('play-options');
+            if (effectiveSetPiece !== 'none' && state.phase === 'possession') {
+                playOptions.style.display = 'flex';
+            } else {
+                playOptions.style.display = 'none';
+            }
+
             // Update HUD
             document.getElementById('hud-position').innerText = state.selectedPosition;
             document.getElementById('hud-ball').innerText = `Ball: ${BALL_ZONES[state.ballZone].label}`;
