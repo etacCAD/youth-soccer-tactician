@@ -811,6 +811,10 @@
                 }
             }
 
+            // Clamp to field boundaries — players must never leave the pitch
+            newX = Math.max(2, Math.min(98, newX));
+            newY = Math.max(2, Math.min(98, newY));
+
             return { x: newX, y: newY };
         }
 
