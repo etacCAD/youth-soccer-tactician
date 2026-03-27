@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <script>
-        // const pw = prompt("Enter password to access Coach JR:");
-        // if (pw !== "JRSAYS") {
-        //     document.documentElement.innerHTML = "<body style='background:#0f1923; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;'><h1>Access Denied</h1></body>";
-        //     throw new Error("Unauthorized");
-        // }
+        const pw = prompt("Enter password to access Coach JR:");
+        if (pw !== "JRSAYS") {
+            document.documentElement.innerHTML = "<body style='background:#0f1923; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;'><h1>Access Denied</h1></body>";
+            throw new Error("Unauthorized");
+        }
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -686,18 +686,20 @@
         </div>
 
         <div class="info-panel">
-            <div class="panel-header">
-                <div>
-                    <span class="selected-pos-badge" id="hud-position">RW</span>
-                    <label class="has-ball-toggle">
-                        <input type="checkbox" id="toggle-has-ball"> Has Ball
-                    </label>
-                    <div class="ball-zone-badge" style="margin-top:8px;">
+            <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
+                <div class="player-status-group" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="selected-pos-badge" id="hud-position">RW</span>
+                        <label class="has-ball-toggle" style="margin: 0;">
+                            <input type="checkbox" id="toggle-has-ball"> Has Ball
+                        </label>
+                    </div>
+                    <div class="ball-zone-badge">
                         <div class="ball-icon-small">⚽️</div>
                         <span id="hud-ball">Ball: LCB</span>
                     </div>
                 </div>
-                <div class="sequence-controls">
+                <div class="sequence-controls" style="display: flex; flex-wrap: wrap; gap: 8px;">
                     <button id="btn-ai" class="ai-btn">⚡ AI Analysis</button>
                     <button id="btn-replay" class="ctrl-btn">▶ Replay</button>
                     <button id="btn-reset" class="ctrl-btn">↺ Reset</button>
