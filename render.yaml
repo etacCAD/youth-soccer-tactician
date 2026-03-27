@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: youth-soccer-tactician
+    env: node
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false

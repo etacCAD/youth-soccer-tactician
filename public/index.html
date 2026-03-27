@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        const pw = prompt("Enter password to access Coach JR:");
+        if (pw !== "JRSAYS") {
+            document.documentElement.innerHTML = "<body style='background:#0f1923; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;'><h1>Access Denied</h1></body>";
+            throw new Error("Unauthorized");
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Youth Soccer Positioning Coach</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f1923;
+            --bg-panel: #1c2b38;
+            --bg-card: #253847;
+            
+            --field-grass: #2d8a4e;
+            --field-lines: rgba(255, 255, 255, 0.6);
+            --field-mow-dark: #267943;
+            --field-mow-light: #2d8a4e;
+            
+            --accent: #f5a623;
+            --highlight: #00e5ff;
+            --text-main: #ffffff;
+            --text-muted: #b0c4d8;
+            
+            --player-team: #ffffff;
+            --player-text: #0f1923;
+            
+            --font-family: 'Inter', sans-serif;
+            --header-height: 60px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+        }
+
+        /* --- Header & Controls --- */
+        header {
+            height: var(--header-height);
+            background-color: var(--bg-panel);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 0 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .phase-toggle {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            padding: 4px;
+            margin-top: 8px;
+            margin-bottom: 12px;
+            align-self: center;
+        }
+
+        .phase-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 16px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .phase-btn.active {
+            background: var(--accent);
+            color: #000;
+        }
+
+        /* --- Main Layout --- */
+        main {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        @media (min-width: 768px) {
+            main {
+                flex-direction: row;
+                align-items: stretch;
+            }
+        }
+
+        /* --- Field Area --- */
+        .field-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            position: relative;
+            max-height: 55vh; /* constrain on mobile so bottom panel fits */
+        }
+
+        @media (min-width: 768px) {
+            .field-container {
+                max-height: none;
+                flex: 2;
+                padding: 2rem;
+            }
+        }
+
+        .field {
+            width: 100%;
+            height: 100%;
+            background-color: var(--field-grass);
+            border: 2px solid var(--field-lines);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Field lines styling inside SVG */
+        .field-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Dynamic Elements Layer */
+        .dynamic-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+
+        /* --- Bottom/Side Panel --- */
+        .info-panel {
+            background-color: var(--bg-panel);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        @media (min-width: 768px) {
+            .info-panel {
+                flex: 1;
+                max-width: 400px;
+                border-top: none;
+                border-left: 1px solid rgba(255,255,255,0.1);
+            }
+        }
+
+        .panel-header {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-card);
+        }
+
+        .selected-pos-badge {
+            background: var(--highlight);
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+        }
+        
+        .ball-zone-badge {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .ball-icon-small {
+            font-size: 14px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .coaching-cards {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .coach-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            border-left: 4px solid var(--accent);
+        }
+
+        .coach-card.look { border-left-color: #3498db; }
+        .coach-card.ready { border-left-color: #9b59b6; }
+        .coach-card.say { border-left-color: #2ecc71; }
+        .coach-card.alert { border-left-color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
+
+        .card-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-text {
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        /* --- Player and Ball Entities --- */
+        .player {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: var(--player-team);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--player-text);
+            transform: translate(-50%, -50%);
+            transition: top 0.5s cubic-bezier(0.25, 1, 0.5, 1), left 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            border: 2px solid #000;
+        }
+
+        .player.selected {
+            background: var(--highlight);
+            border-color: #fff;
+            box-shadow: 0 0 0 4px rgba(0, 229, 255, 0.3), 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        .opp-player {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: #1e40af;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 8px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.7);
+            transform: translate(-50%, -50%);
+            transition: top 0.5s cubic-bezier(0.25, 1, 0.5, 1), left 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            border: 2px solid #000;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .ball {
+            position: absolute;
+            font-size: 18px;
+            transform: translate(-50%, -50%);
+            transition: top 0.4s ease, left 0.4s ease;
+            z-index: 5;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 20px;
+            height: 20px;
+        }
+
+        .ball-zone-target {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0);
+            border: 2px dashed rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 4;
+        }
+
+        .ball-zone-target:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255,255,255,0.5);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+        
+        .ball-zone-target.active {
+            display: none; /* Hide the target if ball is already there */
+        }
+
+        .ctrl-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-left: 6px;
+        }
+        .ctrl-btn:hover { background: rgba(255,255,255,0.2); }
+        .sequence-controls { display: flex; }
+        
+        .has-ball-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 12px;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            background: rgba(0,0,0,0.4);
+            padding: 4px 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .has-ball-toggle input { cursor: pointer; }
+
+        /* ─── Tactical AI Panel ───────────────────────── */
+        .ai-btn {
+            background: linear-gradient(135deg, #f5a623, #e0891e);
+            border: none;
+            color: #000;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(245, 166, 35, 0.3);
+        }
+        .ai-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245, 166, 35, 0.4); }
+        .ai-btn:active { transform: translateY(0); }
+        .ai-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .ai-btn.loading { animation: pulse-glow 1.5s ease-in-out infinite; }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 2px 8px rgba(245, 166, 35, 0.3); }
+            50% { box-shadow: 0 4px 20px rgba(245, 166, 35, 0.6); }
+        }
+
+        .ai-back-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--text-muted);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .ai-back-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+        .tactical-panel { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+        .tactical-summary {
+            background: linear-gradient(135deg, rgba(245,166,35,0.15), rgba(245,166,35,0.05));
+            border: 1px solid rgba(245,166,35,0.2);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .team-group-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .player-row {
+            background: rgba(255,255,255,0.04);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: background 0.2s;
+        }
+        .player-row:hover { background: rgba(255,255,255,0.07); }
+        .player-row.focused { background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.2); }
+
+        .player-row-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            cursor: pointer;
+        }
+
+        .player-pos-badge {
+            background: var(--player-team);
+            color: var(--player-text);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 10px;
+            min-width: 36px;
+            text-align: center;
+        }
+        .player-row.opp .player-pos-badge {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .player-action-text {
+            flex: 1;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            line-height: 1.3;
+        }
+
+        .expand-icon {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            transition: transform 0.2s;
+        }
+        .player-row.expanded .expand-icon { transform: rotate(90deg); }
+
+        .player-detail {
+            display: none;
+            padding: 0 12px 12px;
+        }
+        .player-row.expanded .player-detail { display: block; }
+
+        .detail-pill {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+        .detail-pill-label {
+            font-weight: 700;
+            color: var(--text-muted);
+            min-width: 40px;
+            text-transform: uppercase;
+            font-size: 0.65rem;
+            padding-top: 2px;
+        }
+        .detail-pill-text { color: var(--text-main); }
+
+        .opp-threat { color: #e74c3c; font-size: 0.8rem; margin-top: 4px; }
+        .opp-exploit { color: #2ecc71; font-size: 0.8rem; margin-top: 2px; }
+
+        .ai-error {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Soccer Positioning Engine</h1>
+    </header>
+    
+    <div class="phase-toggle">
+        <button class="phase-btn active" data-phase="possession">Offense / In Possession</button>
+        <button class="phase-btn" data-phase="defense">Defense / Out of Possession</button>
+    </div>
+
+    <main>
+        <div class="field-container">
+            <div class="field" id="soccer-field">
+                <!-- Static Field Lines -->
+                <svg class="field-svg" viewBox="0 0 100 150" preserveAspectRatio="none">
+                    <!-- Base mow lines -->
+                    <defs>
+                        <pattern id="mow" width="100" height="10" patternUnits="userSpaceOnUse">
+                            <rect width="100" height="5" fill="var(--field-mow-light)" />
+                            <rect y="5" width="100" height="5" fill="var(--field-mow-dark)" />
+                        </pattern>
+                    </defs>
+                    <rect width="100" height="150" fill="url(#mow)" />
+                    
+                    <g stroke="var(--field-lines)" stroke-width="0.5" fill="none">
+                        <!-- Center Line -->
+                        <line x1="0" y1="75" x2="100" y2="75" />
+                        <!-- Center Circle -->
+                        <circle cx="50" cy="75" r="10" />
+                        <circle cx="50" cy="75" r="0.8" fill="var(--field-lines)" />
+                        
+                        <!-- Top Penalty Area -->
+                        <rect x="20" y="0" width="60" height="18" />
+                        <rect x="35" y="0" width="30" height="6" />
+                        <path d="M 40 18 A 10 10 0 0 0 60 18" />
+                        <circle cx="50" cy="12" r="0.5" fill="var(--field-lines)" />
+                        
+                        <!-- Bottom Penalty Area -->
+                        <rect x="20" y="132" width="60" height="18" />
+                        <rect x="35" y="144" width="30" height="6" />
+                        <path d="M 60 132 A 10 10 0 0 0 40 132" />
+                        <circle cx="50" cy="138" r="0.5" fill="var(--field-lines)" />
+                    </g>
+                </svg>
+
+                <div class="dynamic-layer" id="dynamic-layer">
+                    <!-- Ball Zones, Ball, and Players injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div class="panel-header">
+                <div>
+                    <span class="selected-pos-badge" id="hud-position">RW</span>
+                    <label class="has-ball-toggle">
+                        <input type="checkbox" id="toggle-has-ball"> Has Ball
+                    </label>
+                    <div class="ball-zone-badge" style="margin-top:8px;">
+                        <div class="ball-icon-small">⚽️</div>
+                        <span id="hud-ball">Ball: LCB</span>
+                    </div>
+                </div>
+                <div class="sequence-controls">
+                    <button id="btn-ai" class="ai-btn">⚡ AI Analysis</button>
+                    <button id="btn-replay" class="ctrl-btn">▶ Replay</button>
+                    <button id="btn-reset" class="ctrl-btn">↺ Reset</button>
+                </div>
+            </div>
+            
+            <div class="coaching-cards" id="coaching-cards">
+                <!-- Cards injected by JS -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const POSITIONS = ['GK', 'LCB', 'RCB', 'LB', 'RB', 'CDM', 'LCM', 'RCM', 'LW', 'ST', 'RW'];
+
+        const BALL_ZONES = {
+            'GK': { x: 50, y: 92, label: 'Goalkeeper' },
+            'LCB': { x: 35, y: 75, label: 'Left Center Back' },
+            'RCB': { x: 65, y: 75, label: 'Right Center Back' },
+            'LB': { x: 15, y: 65, label: 'Left Back' },
+            'RB': { x: 85, y: 65, label: 'Right Back' },
+            'CDM': { x: 50, y: 55, label: 'Holding Mid' },
+            'LCM': { x: 35, y: 40, label: 'Left Mid' },
+            'RCM': { x: 65, y: 40, label: 'Right Mid' },
+            'LW': { x: 15, y: 25, label: 'Left Winger' },
+            'ST': { x: 50, y: 20, label: 'Striker' },
+            'RW': { x: 85, y: 25, label: 'Right Winger' },
+            'OPP-LB': { x: 85, y: 5, label: 'Opponent Left Back' },
+            'OPP-CB': { x: 50, y: 5, label: 'Opponent Center Back' },
+            'OPP-RB': { x: 15, y: 5, label: 'Opponent Right Back' }
+        };
+
+        const BASE_OFFENSE = {
+            'GK': { x: 50, y: 94 },
+            'LCB': { x: 30, y: 75 },
+            'RCB': { x: 70, y: 75 },
+            'LB': { x: 10, y: 55 },
+            'RB': { x: 90, y: 55 },
+            'CDM': { x: 50, y: 58 },
+            'LCM': { x: 35, y: 40 },
+            'RCM': { x: 65, y: 40 },
+            'LW': { x: 10, y: 20 },
+            'ST': { x: 50, y: 15 },
+            'RW': { x: 90, y: 20 },
+        };
+
+        const BASE_DEFENSE = {
+            'GK': { x: 50, y: 96 },
+            'LCB': { x: 40, y: 80 },
+            'RCB': { x: 60, y: 80 },
+            'LB': { x: 25, y: 75 },
+            'RB': { x: 75, y: 75 },
+            'CDM': { x: 50, y: 65 },
+            'LCM': { x: 35, y: 60 },
+            'RCM': { x: 65, y: 60 },
+            'LW': { x: 30, y: 50 },
+            'ST': { x: 50, y: 45 },
+            'RW': { x: 70, y: 50 },
+        };
+
+        const BASE_OPP_DEFENSE = {
+            'GK': { x: 50, y: 6 },
+            'LCB': { x: 60, y: 20 },
+            'RCB': { x: 40, y: 20 },
+            'LB': { x: 80, y: 25 },
+            'RB': { x: 20, y: 25 },
+            'CDM': { x: 50, y: 32 },
+            'LCM': { x: 65, y: 40 },
+            'RCM': { x: 35, y: 40 },
+            'LW': { x: 70, y: 48 },
+            'ST': { x: 50, y: 55 },
+            'RW': { x: 30, y: 48 }
+        };
+
+        const BASE_OPP_OFFENSE = {
+            'GK': { x: 50, y: 10 },
+            'LCB': { x: 70, y: 25 },
+            'RCB': { x: 30, y: 25 },
+            'LB': { x: 90, y: 45 },
+            'RB': { x: 10, y: 45 },
+            'CDM': { x: 50, y: 42 },
+            'LCM': { x: 65, y: 60 },
+            'RCM': { x: 35, y: 60 },
+            'LW': { x: 90, y: 75 },
+            'ST': { x: 50, y: 80 },
+            'RW': { x: 10, y: 75 },
+        };
+
+        const state = {
+            phase: 'possession',
+            ballZone: 'LCB',
+            selectedPosition: 'RW',
+            sequence: ['LCB'],
+            isReplaying: false,
+            hasBall: false
+        };
+
+        function getDistanceSq(p1, p2) {
+            return Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2);
+        }
+
+        function getClosestFieldPlayer(baseObj, bz) {
+            let closestPos = null;
+            let minVal = Infinity;
+            POSITIONS.forEach(pos => {
+                if (pos === 'GK') return;
+                const dist = getDistanceSq(baseObj[pos], bz);
+                if (dist < minVal) {
+                    minVal = dist;
+                    closestPos = pos;
+                }
+            });
+            return closestPos || 'ST';
+        }
+
+        function getPlayerCoords(pos, phase, ballZone) {
+            const bz = BALL_ZONES[ballZone];
+            const isOffense = phase === 'possession';
+            const base = isOffense ? BASE_OFFENSE[pos] : BASE_DEFENSE[pos];
+            
+            // If ball carrier in offense, or 'hasBall' is checked
+            if (state.hasBall && pos === state.selectedPosition) {
+                return { x: bz.x, y: bz.y }; // snap to ball
+            }
+            if (isOffense && pos === ballZone) {
+                return { x: bz.x, y: bz.y };
+            }
+
+            let newX = base.x;
+            let newY = base.y;
+
+            // Simple positional gravity engine
+            if (isOffense) {
+                // Shift team up field based on ball depth
+                if (bz.y < 50) {
+                    newY -= (50 - bz.y) * 0.5;
+                }
+                
+                // Shift slightly to ball side for support
+                const distToBallX = bz.x - base.x;
+                
+                // Width rules: wingers stay wide on weak side
+                if (pos === 'LW' || pos === 'RW') {
+                    if (Math.abs(distToBallX) > 50) {
+                        // Weak side winger stays wide but pushes up slightly
+                        newX = base.x;
+                    } else {
+                        newX += distToBallX * 0.1;
+                    }
+                } else {
+                    newX += distToBallX * 0.2;
+                }
+                
+                // Keep depth
+                if (pos === 'ST') newY = Math.max(10, bz.y - 15);
+                if (pos === 'CDM') newY = Math.min(80, bz.y + 15);
+
+                // Enforce Offside Rule dynamically
+                // Simulate opponent offside line: matched to their High Line formula
+                const offsideLine = Math.min(45, bz.y - 15);
+                
+                if (newY < offsideLine) {
+                    newY = offsideLine;
+                    // Slight stagger so wingers and ST don't perfectly overlap horizontally
+                    if (pos === 'LW' || pos === 'RW') newY += 2;
+                }
+
+            } else {
+                // Defense: Compact 4-1-4-1 or 4-5-1 shape with aggressive First Defender pressing
+                const isLeft = base.x < 50;
+                const isRight = base.x > 50;
+                const isBallLeft = bz.x < 50;
+                const isBallRight = bz.x > 50;
+                const isBallSide = (isLeft && isBallLeft) || (isRight && isBallRight);
+
+                let shiftY = (bz.y - 50) * 0.25; // shift line deeper when ball goes deep
+                const firstDefender = getClosestFieldPlayer(BASE_DEFENSE, bz);
+
+                if (pos === firstDefender) {
+                    // First defender aggressively steps to pressure the ball
+                    newX = bz.x;
+                    newY = bz.y + 3; // goal-side of the ball
+                } else if (pos === 'ST') {
+                    // ST drops to cut passing lanes to center
+                    newY = Math.max(40, bz.y + 10);
+                    newX = 50 + (bz.x - 50) * 0.4;
+                } else if (pos === 'LW' || pos === 'RW') {
+                    // Wingers drop into a dense midfield block
+                    newY = 60 + shiftY;
+                    if (isBallSide) {
+                        newY -= 5; // providing closer cover
+                        newX = base.x + (bz.x - base.x) * 0.6;
+                    } else {
+                        // tuck inside for balance
+                        newX = pos === 'LW' ? 35 : 65;
+                        newY += 5; // drop slightly deeper on weak side
+                    }
+                } else if (pos === 'LCM' || pos === 'RCM' || pos === 'CDM') {
+                    // Midfield trio shifts as a compact block
+                    newY = pos === 'CDM' ? 70 + shiftY : 65 + shiftY;
+                    let targetX = base.x + (bz.x - 50) * 0.6;
+                    newX = Math.max(20, Math.min(80, targetX));
+                    
+                    // Add extra depth if ball is behind them
+                    if (bz.y > newY - 5) newY = bz.y + 5; 
+                } else if (pos === 'LB' || pos === 'RB' || pos === 'LCB' || pos === 'RCB') {
+                    // Backline plays a High Line (Offside Trap). Push up to near midfield (55), drop if ball is deep
+                    let highLineY = Math.max(55, bz.y + 15);
+                    newY = highLineY;
+                    // Cap depth so they don't sit in the goal
+                    newY = Math.min(92, newY); 
+
+                    if (pos === 'LB' || pos === 'RB') {
+                        if (isBallSide) {
+                            newX = base.x + (bz.x - base.x) * 0.6;
+                            newY -= 2; // step slightly for cover depth
+                        } else {
+                            newX = pos === 'LB' ? 35 : 65; // tuck all the way in
+                            newY += 2; // drop extra
+                        }
+                    } else {
+                        // CBs shift towards ball
+                        newX = base.x + (bz.x - 50) * 0.5;
+                        // Provide cover to pressing FB
+                        if (isBallSide) newY += 3;
+                    }
+                }
+                
+                // Keep GK attached to CBs
+                if (pos === 'GK') {
+                    newX = 50 + (bz.x - 50) * 0.2;
+                    newY = 94 + shiftY * 0.3;
+                }
+            }
+
+            return { x: newX, y: newY };
+        }
+
+        function getOpponentCoords(pos, phase, ballZone) {
+            const bz = BALL_ZONES[ballZone];
+            const isOppDefense = phase === 'possession'; 
+            const base = isOppDefense ? BASE_OPP_DEFENSE[pos] : BASE_OPP_OFFENSE[pos];
+            
+            let newX = base.x;
+            let newY = base.y;
+            
+            // Snap the closest or exact role if ball is in an opponent zone
+            if (!isOppDefense && ballZone.startsWith('OPP-')) {
+                if (ballZone === 'OPP-LB' && pos === 'LB') return {x: bz.x, y: bz.y};
+                if (ballZone === 'OPP-CB' && pos === 'RCB') return {x: bz.x, y: bz.y};
+                if (ballZone === 'OPP-RB' && pos === 'RB') return {x: bz.x, y: bz.y};
+            }
+
+            if (isOppDefense) {
+                // Opponent is defending (trying to stop us) - compact shape
+                let shiftY = (bz.y - 50) * 0.2; 
+                const firstDefender = getClosestFieldPlayer(BASE_OPP_DEFENSE, bz);
+
+                if (pos === firstDefender) {
+                    // First defender aggressively steps to pressure the ball
+                    newX = bz.x;
+                    newY = bz.y - 3; // goal-side (their goal is y=0)
+                } else {
+                    const isLeft = base.x < 50;
+                    const isRight = base.x > 50;
+                    const isBallLeft = bz.x < 50;
+                    const isBallRight = bz.x > 50;
+                    const isBallSide = (isLeft && isBallLeft) || (isRight && isBallRight);
+
+                    // Structured drop
+                    if (pos === 'ST') {
+                        newY = Math.min(60, bz.y - 10);
+                        newX = 50 + (bz.x - 50) * 0.4;
+                    } else if (pos === 'LW' || pos === 'RW' || pos === 'LCM' || pos === 'RCM' || pos === 'CDM') {
+                        newY += shiftY;
+                        if (isBallSide) {
+                            newX += (bz.x - base.x) * 0.5;
+                            newY += 2; // step towards coverage
+                        } else {
+                            newX = pos.includes('L') ? 40 : 60; // tuck in tightly
+                            newY -= 3; // drop deeper
+                        }
+
+                        // If beaten (they are higher than the ball + buffer), force recovery
+                        if (newY > bz.y + 15) newY = bz.y + 15;
+                    } else if (pos === 'LB' || pos === 'RB' || pos === 'LCB' || pos === 'RCB') {
+                        // Opponent Backline plays a High Line (Offside Trap)
+                        let oppHighLineY = Math.min(45, bz.y - 15);
+                        newY = oppHighLineY;
+                        // Cap depth so they don't enter their own goal
+                        newY = Math.max(8, newY);
+
+                        if (pos === 'LB' || pos === 'RB') {
+                            if (isBallSide) {
+                                newX += (bz.x - base.x) * 0.5;
+                                newY += 2; // step to cover
+                            } else {
+                                newX = pos === 'LB' ? 40 : 60; // tuck inside to defend box
+                                newY -= 3; // drop to backline depth
+                            }
+                        } else {
+                            newX = base.x + (bz.x - 50) * 0.4; // CBs strictly shift with center
+                        }
+                    }
+                }
+            } else {
+                // Opponent is attacking (trying to score on us)
+                let shiftY = (bz.y - 50) * 0.2;
+                if (bz.y > 60) newY += 10; // push up if they have ball deep in our half
+                
+                const distToBallX = bz.x - base.x;
+                newX += distToBallX * 0.15; // slight support movement
+                
+                // Keep attackers ONSIDE by respecting our High Line
+                const ourOffsideLine = Math.max(55, bz.y + 15);
+                if (pos === 'ST' || pos === 'LW' || pos === 'RW' || pos === 'LCM' || pos === 'RCM') {
+                    if (newY > ourOffsideLine) {
+                        newY = ourOffsideLine - 2; // stay just onside (closer to their own goal at y=0)
+                    }
+                }
+                
+                // Snap closest offensive opponent to the ball if our team is defending
+                if (bz.y > 50) {
+                    // Ball is in our half
+                    if (bz.x > 60 && pos === 'LW') { newX = bz.x; newY = bz.y; }
+                    else if (bz.x < 40 && pos === 'RW') { newX = bz.x; newY = bz.y; }
+                    else if (bz.x >= 40 && bz.x <= 60 && pos === 'ST') { newX = bz.x; newY = bz.y; }
+                } else {
+                    // Ball is in their half
+                    if (bz.x > 60 && pos === 'LB') { newX = bz.x; newY = bz.y; }
+                    else if (bz.x < 40 && pos === 'RB') { newX = bz.x; newY = bz.y; }
+                    else if (bz.x >= 40 && bz.x <= 60 && (pos === 'LCM' || pos === 'RCM')) {
+                        if (pos === 'LCM' && bz.x >= 50) { newX = bz.x; newY = bz.y; }
+                        if (pos === 'RCM' && bz.x <= 50) { newX = bz.x; newY = bz.y; }
+                    }
+                }
+            }
+            
+            // Keep on field boundaries
+            newX = Math.max(5, Math.min(95, newX));
+            newY = Math.max(2, Math.min(98, newY));
+
+            return { x: newX, y: newY };
+        }
+
+        function getCoachingText(pos, phase, ballZone) {
+            const bz = BALL_ZONES[ballZone];
+            const isOffense = phase === 'possession';
+            const isBallCarrier = (isOffense && pos === ballZone) || (state.hasBall && pos === state.selectedPosition);
+            
+            const isLeft = BASE_OFFENSE[pos].x < 40;
+            const isRight = BASE_OFFENSE[pos].x > 60;
+            const isBallLeft = bz.x < 40;
+            const isBallRight = bz.x > 60;
+            const isBallSide = (isLeft && isBallLeft) || (isRight && isBallRight) || (!isLeft && !isRight);
+            const isDefender = pos === 'LB' || pos === 'RB' || pos === 'LCB' || pos === 'RCB' || pos === 'CDM';
+
+            if (state.hasBall && pos === state.selectedPosition) {
+                let text = {
+                    where: "On the ball.",
+                    look: "Scan forward immediately. Can you play forward or drive into space?",
+                    ready: "Pass, dribble, or protect the ball.",
+                    say: "Listen for teammates yelling 'Time', 'Man on', or 'Turn'.",
+                    alert: "Don't stare at the ball—keep your head up to see the field."
+                };
+                
+                if (isDefender) {
+                    text.ready += " If you are under heavy pressure, playing the ball safely back to the GK is a great option.";
+                    text.alert = "Don't force a dangerous pass up the middle. Reset to the GK or switch it wide.";
+                }
+
+                if (pos === 'LW' || pos === 'RW') {
+                    text.ready = "Drive at the fullback 1v1! Look to beat them down the line for a cross, or cut inside to shoot.";
+                    text.alert = "Don't just pass backward if you have space. Be aggressive and take them on!";
+                } else if (pos === 'LCM' || pos === 'RCM' || pos === 'CDM') {
+                    text.look = "Scan for runners. Can you slide a through ball between their center backs?";
+                    text.ready = "If there's space, drive forward. If pressure comes, look for a through ball or slip pass.";
+                } else if (pos === 'LB' || pos === 'RB') {
+                    if (bz.y < 50) {
+                        text.ready = "Look to deliver an early cross into the box or play your winger down the line.";
+                    }
+                }
+
+                return text;
+            }
+
+            if (isOffense) {
+                if (isBallCarrier) {
+                    let text = {
+                        where: "You have the ball.",
+                        look: "Scan forward immediately. Can you play forward or drive into space?",
+                        ready: "Pass, dribble, or protect the ball.",
+                        say: "Listen for teammates yelling 'Time', 'Man on', or 'Turn'.",
+                        alert: "Don't stare at the ball—keep your head up to see the field."
+                    };
+                    if (isDefender) {
+                        text.ready += " If under pressure, passing back to your Goalkeeper to reset is a smart and safe option.";
+                    }
+                    if (pos === 'LW' || pos === 'RW') {
+                        text.ready = "Drive at the fullback 1v1! Look to beat them down the line for a cross, or cut inside to shoot.";
+                        text.alert = "Don't just pass backward if you have space. Be aggressive and take them on!";
+                    } else if (pos === 'LCM' || pos === 'RCM' || pos === 'CDM') {
+                        text.look = "Scan for runners. Can you slide a through ball between their center backs?";
+                        text.ready = "If there's space, drive forward. If pressure comes, look for a through ball or slip pass.";
+                    } else if (pos === 'LB' || pos === 'RB') {
+                        if (bz.y < 50) {
+                            text.ready = "Look to deliver an early cross into the box or play your winger down the line.";
+                        }
+                    }
+                    return text;
+                }
+
+                if (pos === 'ST') {
+                    return {
+                        where: "High up the pitch, staying central or splitting center backs.",
+                        look: "Watch the ball carrier's eyes. Are they ready to play a through ball?",
+                        ready: "Make a run behind the defense or check to the ball to connect.",
+                        say: "'Feet' if checking to them, 'Through' if running behind.",
+                        alert: "Don't run offsides while waiting for the pass."
+                    };
+                }
+
+                if ((pos === 'LW' || pos === 'RW')) {
+                    if (isBallSide) {
+                        return {
+                            where: "Wide and high on the ball side.",
+                            look: "Watch the opposing fullback. Can you beat them 1v1 down the line or cut inside?",
+                            ready: "Provide a forward passing option. Be ready to take them on 1v1 and deliver a cross into the box.",
+                            say: "'Line' if you want it down the sideline, or 'Feet' to turn and attack.",
+                            alert: "Don't just pass backward if you have space. Be aggressive and look to create a chance."
+                        };
+                    } else {
+                        return {
+                            where: "Hold your width on the weak side.",
+                            look: "Keep the whole field in view. Watch for the ball to be crossed or a big switch of play.",
+                            ready: "Prepare to crash the back post! If a cross comes in, make a blind-side run behind the opposing fullback.",
+                            say: "'Back post!' to let the crosser know you're making the run.",
+                            alert: "Don't come to the ball too early or ball-watch. Anticipate the cross and time your run into the box."
+                        };
+                    }
+                }
+                
+                if (pos === 'LCM' || pos === 'RCM') {
+                    if (bz.y < 40) {
+                        return {
+                            where: "Supporting the attack at the edge of the penalty box.",
+                            look: "Look for gaps between defenders. Watch where the striker pulls their center backs.",
+                            ready: "Make a late, unmarked run into the box for a cutback, or be ready to shoot from distance.",
+                            say: "'Cutback!' or 'Top of the box!' if you have space.",
+                            alert: "Don't just stand and watch. Your late runs into the box are incredibly hard to defend."
+                        };
+                    } else {
+                        return {
+                            where: "Operating in the half-spaces, offering angles to the ball carrier.",
+                            look: "Scan forward! Look for the striker's run or wingers making runs in behind.",
+                            ready: "Receive on the half-turn. Be ready to play a penetrating through ball to break their lines.",
+                            say: "'Turn' if you have space to face forward.",
+                            alert: "Don't play it safe with sideways passes if you have a clear through ball option."
+                        };
+                    }
+                }
+
+                if (pos === 'LB' || pos === 'RB') {
+                    if (isBallSide && bz.y < 60) {
+                        return {
+                            where: "Pushing high up the touchline to support the winger.",
+                            look: "Watch your winger's movement. Are they cutting inside or staying wide?",
+                            ready: "Make an overlapping run to provide a crossing option or draw a defender away from your winger.",
+                            say: "'Overlap!' as you sprint past the winger.",
+                            alert: "Don't leave your center backs completely exposed. Ensure someone is covering your run."
+                        };
+                    } else if (!isBallSide) {
+                        return {
+                            where: "Tucked inside slightly, balancing the backline.",
+                            look: "Keep an eye on their weak-side winger. Don't let them sneak behind you.",
+                            ready: "Provide defensive cover in case of a quick counter-attack.",
+                            say: "Talk to your center backs to ensure correct spacing.",
+                            alert: "Don't push too high on the weak side when the ball is far away."
+                        };
+                    }
+                }
+                
+                if (pos === 'CDM') {
+                    return {
+                        where: "Just behind the line of the ball.",
+                        look: "Scan the pivot space. Where is the pressure coming from?",
+                        ready: "Offer a safe reset pass underneath exactly when they need it.",
+                        say: "'Drop' or 'Reset' so they know you are an outlet.",
+                        alert: "Don't hide behind a defender. Make sure the ball carrier can see your feet."
+                    };
+                }
+
+                return {
+                    where: isBallSide ? "Moving into a support angle for the ball carrier." : "Shifting to provide balance and shape.",
+                    look: "Check your shoulder! Know what's in the space you are moving into.",
+                    ready: "Form a triangle with the ball carrier. Give them two passing options minimum.",
+                    say: "'Time' if they have space, 'Man on' if pressure is closing.",
+                    alert: "Don't stand still. Movement creates passing lanes."
+                };
+            } else {
+                // Defense
+                if (state.hasBall) {
+                    // Even if phase is defense, if they toggled "Has Ball" mechanically,
+                    // we caught it above. But if they didn't toggle it, and they are defense
+                    // wait, no the above block handles state.hasBall.
+                }
+
+                if (pos === ballZone || (pos === 'ST' && bz.y < 30) || (isBallSide && bz.y >= 30 && bz.y <= 60 && (pos === 'LCM'||pos==='RCM'||pos==='LW'||pos==='RW')) || (isBallSide && bz.y > 60 && (pos === 'LB'||pos==='RB'))) {
+                     // Very rough heuristic for 'First Defender' (stepping to pressure)
+                     return {
+                        where: "Stepping to the ball! You are the first defender applying pressure.",
+                        look: "Watch the ball carrier's hips and eyes to anticipate their pass or dribble.",
+                        ready: "Close them down fast, then slow your feet as you get close. Force them outside or backward.",
+                        say: "'I got ball!' so your team knows you are stepping up to delay.",
+                        alert: "Don't dive in! Your job is to contain and force a mistake, not necessarily win a tackle."
+                    };
+                }
+
+                if (pos === 'GK') {
+                    return {
+                        where: "Connected to your defensive line. Not glued to the goal line.",
+                        look: "Scan for attackers making runs behind your defenders.",
+                        ready: "Play as a sweeper-keeper to clear balls over the top.",
+                        say: "'Step up', 'Drop', or 'Keeper!' to command your area.",
+                        alert: "Don't get caught too far forward if there is no pressure on the ball."
+                    };
+                }
+
+                if ((pos === 'LCB' || pos === 'RCB' || pos === 'LB' || pos === 'RB')) {
+                    const isMySide = (pos.includes('L') && bz.x < 50) || (pos.includes('R') && bz.x > 50);
+                    if (isMySide && bz.y > 50) {
+                        return {
+                            where: "Stepping out or closely marking on the ball side.",
+                            look: "Watch your mark, but keep the ball in your peripheral vision.",
+                            ready: "Prevent the forward pass or cross. Win the 1v1.",
+                            say: "'Cover me' as you step to the ball.",
+                            alert: "Don't let them turn and face you if you can prevent it. If you have the ball, remember playing back to the Goalie is a great option."
+                        };
+                    } else {
+                        return {
+                            where: "Tucked inside, dropping slightly behind the pressing defender to provide cover.",
+                            look: "Scan your blind spot! Attackers love to sneak in behind you on the weak side.",
+                            ready: "Pinch in to protect the center of the penalty box and cover passing lanes.",
+                            say: "'I've got cover' to let the pressing defender know they can step.",
+                            alert: "Don't stay wide when the ball is on the opposite side. Tuck in and compact the space."
+                        };
+                    }
+                }
+
+                return {
+                    where: "Staying compact. Closing the middle. Goal side of your mark.",
+                    look: "Head on a swivel: Ball, Teammate, Opponent.",
+                    ready: "Shift as a unit as the ball moves. Close down passing lanes through the middle.",
+                    say: "Keep the defensive line connected. Talk to the player next to you ('Shift left', 'Step up').",
+                    alert: "Don't get stretched defensively. Protect the middle first and allow them outside."
+                };
+            }
+        }
+
+        function init() {
+            renderField();
+            bindEvents();
+            updateAll();
+        }
+
+        function renderField() {
+            const layer = document.getElementById('dynamic-layer');
+            layer.innerHTML = '';
+
+            // Render Tactical Arrows SVG Layer
+            const arrowSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            arrowSvg.setAttribute("id", "tactical-arrows-svg");
+            // Set viewBox to 0 0 100 100 so coordinates match 0-100% top/left exactly
+            arrowSvg.setAttribute("viewBox", "0 0 100 100");
+            arrowSvg.setAttribute("preserveAspectRatio", "none");
+            arrowSvg.style.position = "absolute";
+            arrowSvg.style.top = "0";
+            arrowSvg.style.left = "0";
+            arrowSvg.style.width = "100%";
+            arrowSvg.style.height = "100%";
+            arrowSvg.style.zIndex = "1";
+            arrowSvg.style.pointerEvents = "none";
+            
+            arrowSvg.innerHTML = `
+                <defs>
+                    <marker id="arrowhead-run" markerWidth="4" markerHeight="4" refX="2" refY="2" orient="auto">
+                        <polygon points="0 0, 4 2, 0 4" fill="rgba(255,255,255,0.4)" />
+                    </marker>
+                    <marker id="arrowhead-pass" markerWidth="4" markerHeight="4" refX="2" refY="2" orient="auto">
+                        <polygon points="0 0, 4 2, 0 4" fill="var(--highlight)" />
+                    </marker>
+                </defs>
+                <g id="tactical-arrows-group"></g>
+            `;
+            layer.appendChild(arrowSvg);
+
+            // Render Ball Zones
+            Object.keys(BALL_ZONES).forEach(key => {
+                const z = BALL_ZONES[key];
+                const target = document.createElement('div');
+                target.className = 'ball-zone-target';
+                target.id = `zone-${key}`;
+                target.style.left = `${z.x}%`;
+                target.style.top = `${z.y}%`;
+                target.onclick = () => setBallZone(key);
+                layer.appendChild(target);
+            });
+
+            // Render Players
+            POSITIONS.forEach(pos => {
+                const p = document.createElement('div');
+                p.className = `player ${pos === state.selectedPosition ? 'selected' : ''}`;
+                p.id = `player-${pos}`;
+                p.innerText = pos;
+                p.onclick = (e) => {
+                    e.stopPropagation(); // prevent clicking zone under player
+                    setSelectedPosition(pos);
+                };
+                layer.appendChild(p);
+            });
+
+            // Render Opponents
+            POSITIONS.forEach(pos => {
+                const op = document.createElement('div');
+                op.className = `opp-player`;
+                op.id = `opp-player-${pos}`;
+                op.innerText = pos;
+                layer.appendChild(op);
+            });
+
+            // Render Ball
+            const ball = document.createElement('div');
+            ball.className = 'ball';
+            ball.id = 'the-ball';
+            ball.innerHTML = '⚽️';
+            layer.appendChild(ball);
+        }
+
+        function bindEvents() {
+            document.querySelectorAll('.phase-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    document.querySelectorAll('.phase-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    state.phase = e.target.dataset.phase;
+                    updateAll();
+                };
+            });
+            
+            document.getElementById('toggle-has-ball').onchange = (e) => {
+                state.hasBall = e.target.checked;
+                updateAll();
+            };
+            
+            document.getElementById('btn-reset').onclick = resetSequence;
+            document.getElementById('btn-replay').onclick = replaySequence;
+        }
+
+        function setBallZone(zone, isReplay = false) {
+            if (state.isReplaying && !isReplay) return; // Block clicks during replay
+            
+            state.ballZone = zone;
+            if (!isReplay) {
+                // If the last move was the same, don't dupe it
+                if (state.sequence[state.sequence.length - 1] !== zone) {
+                    state.sequence.push(zone);
+                }
+            }
+            updateAll();
+        }
+
+        function resetSequence() {
+            if (state.isReplaying) return;
+            state.sequence = ['GK'];
+            setBallZone('GK');
+        }
+
+        function replaySequence() {
+            if (state.sequence.length <= 1 || state.isReplaying) return;
+            
+            state.isReplaying = true;
+            let i = 0;
+            const seq = [...state.sequence];
+            
+            // Go to start immediately
+            state.ballZone = seq[0];
+            updateAll();
+
+            const interval = setInterval(() => {
+                i++;
+                if (i >= seq.length) {
+                    clearInterval(interval);
+                    state.isReplaying = false;
+                    return;
+                }
+                state.ballZone = seq[i];
+                updateAll();
+            }, 1200); // 1.2s per step
+        }
+
+        function setSelectedPosition(pos) {
+            state.selectedPosition = pos;
+            document.querySelectorAll('.player').forEach(p => p.classList.remove('selected'));
+            document.getElementById(`player-${pos}`).classList.add('selected');
+            updateAll();
+        }
+
+        function updateAll() {
+            // Update HUD
+            document.getElementById('hud-position').innerText = state.selectedPosition;
+            document.getElementById('hud-ball').innerText = `Ball: ${BALL_ZONES[state.ballZone].label}`;
+
+            // Update Ball Position
+            const ballEl = document.getElementById('the-ball');
+            const ballCoords = BALL_ZONES[state.ballZone];
+            ballEl.style.left = `${ballCoords.x}%`;
+            ballEl.style.top = `${ballCoords.y}%`;
+
+            // Update Player Positions
+            POSITIONS.forEach(pos => {
+                const pEl = document.getElementById(`player-${pos}`);
+                const coords = getPlayerCoords(pos, state.phase, state.ballZone);
+                pEl.style.left = `${coords.x}%`;
+                pEl.style.top = `${coords.y}%`;
+            });
+
+            // Update Opponent Positions
+            POSITIONS.forEach(pos => {
+                const opEl = document.getElementById(`opp-player-${pos}`);
+                const opCoords = getOpponentCoords(pos, state.phase, state.ballZone);
+                opEl.style.left = `${opCoords.x}%`;
+                opEl.style.top = `${opCoords.y}%`;
+            });
+
+            // Hide active ball zone target
+            document.querySelectorAll('.ball-zone-target').forEach(el => el.classList.remove('active'));
+            document.getElementById(`zone-${state.ballZone}`).classList.add('active');
+
+            renderTacticalArrows();
+
+            // Render Coaching Card
+            renderCard();
+        }
+
+        function renderCard() {
+            const cardData = getCoachingText(state.selectedPosition, state.phase, state.ballZone);
+            const container = document.getElementById('coaching-cards');
+            
+            container.innerHTML = `
+                <div class="coach-card look">
+                    <div class="card-title">📍 Where you should be</div>
+                    <div class="card-text">${cardData.where}</div>
+                </div>
+                <div class="coach-card look" style="border-left-color: #3498db;">
+                    <div class="card-title">👀 What you should be looking for</div>
+                    <div class="card-text">${cardData.look}</div>
+                </div>
+                <div class="coach-card ready">
+                    <div class="card-title">⚡ What to be ready to do</div>
+                    <div class="card-text">${cardData.ready}</div>
+                </div>
+                <div class="coach-card say">
+                    <div class="card-title">💬 What you should be saying</div>
+                    <div class="card-text">${cardData.say}</div>
+                </div>
+                <div class="coach-card alert">
+                    <div class="card-title">⚠️ Biggest mistake to avoid</div>
+                    <div class="card-text">${cardData.alert}</div>
+                </div>
+            `;
+        }
+
+        function renderTacticalArrows() {
+            const group = document.getElementById('tactical-arrows-group');
+            if (!group) return;
+            
+            let svgHtml = '';
+            
+            // Only draw arrows on offense
+            if (state.phase !== 'possession' || state.ballZone.startsWith('OPP-')) {
+                group.innerHTML = '';
+                return;
+            }
+
+            const ballCoords = BALL_ZONES[state.ballZone];
+            const carrierPos = state.hasBall ? state.selectedPosition : state.ballZone;
+            const carrierCoords = getPlayerCoords(carrierPos, state.phase, state.ballZone);
+            
+            const recommendedPassesMap = {
+                'LCB': ['LB', 'CDM'],
+                'RCB': ['RB', 'CDM'],
+                'LB': ['LW', 'LCM'],
+                'RB': ['RW', 'RCM'],
+                'CDM': ['LCM', 'RCM'],
+                'LCM': ['LW', 'ST'],
+                'RCM': ['RW', 'ST'],
+                'LW': ['ST', 'LCM'],
+                'RW': ['ST', 'RCM'],
+                'ST': ['LW', 'RW'],
+                'GK': ['LCB', 'RCB']
+            };
+
+            const recPasses = recommendedPassesMap[carrierPos] || [];
+
+            // 1. Draw Passes (Highlight)
+            recPasses.forEach(targetPos => {
+                if (targetPos === carrierPos) return;
+                const targetCoords = getPlayerCoords(targetPos, state.phase, state.ballZone);
+                svgHtml += `<line x1="${carrierCoords.x}" y1="${carrierCoords.y}" x2="${targetCoords.x}" y2="${targetCoords.y}" 
+                             stroke="var(--highlight)" stroke-width="0.8" stroke-dasharray="1.5,1.5" marker-end="url(#arrowhead-pass)" />`;
+            });
+
+            // 2. Draw Runs (Faint white)
+            POSITIONS.forEach(pos => {
+                if (pos === 'GK' || pos === carrierPos) return;
+                
+                const pCoords = getPlayerCoords(pos, state.phase, state.ballZone);
+                let runVector = { dx: 0, dy: 0 };
+                
+                if (pos === 'ST') {
+                    runVector.dy = -10;
+                    runVector.dx = (50 - pCoords.x) * 0.2; 
+                } else if (pos === 'LW' || pos === 'RW') {
+                    if (pos === 'LW') { runVector.dy = -12; runVector.dx = pCoords.x > 20 ? -5 : 0; }
+                    if (pos === 'RW') { runVector.dy = -12; runVector.dx = pCoords.x < 80 ? 5 : 0; }
+                } else if (pos === 'LCM' || pos === 'RCM') {
+                    runVector.dy = -8;
+                    runVector.dx = pos === 'LCM' ? -3 : 3;
+                } else if (pos === 'LB' || pos === 'RB') {
+                    const isLeft = pos === 'LB';
+                    const ballIsLeft = ballCoords.x < 50;
+                    if ((isLeft && ballIsLeft) || (!isLeft && !ballIsLeft)) {
+                        runVector.dy = -15;
+                    } else {
+                        runVector.dy = -5;
+                    }
+                }
+                
+                if (runVector.dx !== 0 || runVector.dy !== 0) {
+                    let targetX = pCoords.x + runVector.dx;
+                    let targetY = pCoords.y + runVector.dy;
+                    
+                    // Keep offside constraint for arrows
+                    const oppOffsideLine = Math.min(45, ballCoords.y - 15);
+                    if (targetY < oppOffsideLine) targetY = oppOffsideLine + 2;
+                    if (targetY < 0) targetY = 2;
+                    
+                    svgHtml += `<line x1="${pCoords.x}" y1="${pCoords.y}" x2="${targetX}" y2="${targetY}" 
+                                 stroke="rgba(255,255,255,0.4)" stroke-width="0.5" marker-end="url(#arrowhead-run)" />`;
+                }
+            });
+
+            group.innerHTML = svgHtml;
+        }
+        // ─── Tactical AI Engine ──────────────────────────────────
+        const AI_API_URL = 'http://localhost:3001';
+        let aiAnalysisData = null;
+        let isAIPanelOpen = false;
+
+        function getGameState() {
+            const playerPositions = {};
+            POSITIONS.forEach(pos => {
+                const coords = getPlayerCoords(pos, state.phase, state.ballZone);
+                playerPositions[pos] = coords;
+            });
+
+            const opponentPositions = {};
+            POSITIONS.forEach(pos => {
+                const coords = getOpponentCoords(pos, state.phase, state.ballZone);
+                opponentPositions[pos] = coords;
+            });
+
+            return {
+                phase: state.phase,
+                ballZone: state.ballZone,
+                selectedPosition: state.selectedPosition,
+                hasBall: state.hasBall,
+                playerPositions,
+                opponentPositions
+            };
+        }
+
+        async function fetchTacticalAnalysis() {
+            const btn = document.getElementById('btn-ai');
+            btn.disabled = true;
+            btn.classList.add('loading');
+            btn.innerHTML = '⚡ Analyzing...';
+
+            try {
+                const gameState = getGameState();
+                const response = await fetch(`${AI_API_URL}/api/tactician`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(gameState)
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                aiAnalysisData = data.analysis;
+                isAIPanelOpen = true;
+                renderAIPanel();
+            } catch (err) {
+                console.error('Tactician error:', err);
+                renderAIError(err.message);
+                isAIPanelOpen = true;
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('loading');
+                btn.innerHTML = '⚡ AI Analysis';
+            }
+        }
+
+        function renderAIPanel() {
+            const container = document.getElementById('coaching-cards');
+            if (!aiAnalysisData) return;
+
+            let html = '';
+
+            // Back button
+            html += `<div style="display:flex;justify-content:space-between;align-items:center;">`;
+            html += `<span style="font-size:0.85rem;font-weight:600;color:var(--accent);">⚡ AI Tactical Analysis</span>`;
+            html += `<button class="ai-back-btn" onclick="closeAIPanel()">← Coaching Cards</button>`;
+            html += `</div>`;
+
+            // Summary
+            if (aiAnalysisData.summary) {
+                html += `<div class="tactical-summary">${aiAnalysisData.summary}</div>`;
+            }
+
+            // Your Team
+            if (aiAnalysisData.yourTeam && aiAnalysisData.yourTeam.length) {
+                html += `<div class="team-group-label">🟢 Your Team</div>`;
+                aiAnalysisData.yourTeam.forEach(p => {
+                    const isFocused = p.position === state.selectedPosition;
+                    const isExpanded = isFocused;
+                    html += `<div class="player-row ${isFocused ? 'focused' : ''} ${isExpanded ? 'expanded' : ''}" onclick="this.classList.toggle('expanded')">`;
+                    html += `<div class="player-row-header">`;
+                    html += `<span class="player-pos-badge">${p.position}</span>`;
+                    html += `<span class="player-action-text">${p.action || ''}</span>`;
+                    html += `<span class="expand-icon">▶</span>`;
+                    html += `</div>`;
+                    html += `<div class="player-detail">`;
+                    if (p.where) html += `<div class="detail-pill"><span class="detail-pill-label">📍 Where</span><span class="detail-pill-text">${p.where}</span></div>`;
+                    if (p.look)  html += `<div class="detail-pill"><span class="detail-pill-label">👀 Look</span><span class="detail-pill-text">${p.look}</span></div>`;
+                    if (p.ready) html += `<div class="detail-pill"><span class="detail-pill-label">⚡ Ready</span><span class="detail-pill-text">${p.ready}</span></div>`;
+                    if (p.say)   html += `<div class="detail-pill"><span class="detail-pill-label">🗣️ Say</span><span class="detail-pill-text">${p.say}</span></div>`;
+                    if (p.alert) html += `<div class="detail-pill"><span class="detail-pill-label">⚠️ Alert</span><span class="detail-pill-text">${p.alert}</span></div>`;
+                    html += `</div></div>`;
+                });
+            }
+
+            // Opponent
+            if (aiAnalysisData.opponent && aiAnalysisData.opponent.length) {
+                html += `<div class="team-group-label">🔴 Opponent Analysis</div>`;
+                aiAnalysisData.opponent.forEach(p => {
+                    html += `<div class="player-row opp" onclick="this.classList.toggle('expanded')">`;
+                    html += `<div class="player-row-header">`;
+                    html += `<span class="player-pos-badge">${p.position}</span>`;
+                    html += `<span class="player-action-text">${p.action || ''}</span>`;
+                    html += `<span class="expand-icon">▶</span>`;
+                    html += `</div>`;
+                    html += `<div class="player-detail">`;
+                    if (p.threat)  html += `<div class="opp-threat">🚨 Threat: ${p.threat}</div>`;
+                    if (p.exploit) html += `<div class="opp-exploit">💡 Exploit: ${p.exploit}</div>`;
+                    html += `</div></div>`;
+                });
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderAIError(message) {
+            const container = document.getElementById('coaching-cards');
+            container.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:0.85rem;font-weight:600;color:var(--accent);">⚡ AI Tactical Analysis</span>
+                    <button class="ai-back-btn" onclick="closeAIPanel()">← Coaching Cards</button>
+                </div>
+                <div class="ai-error">
+                    ⚠️ Could not reach the Tactical AI.<br>
+                    <span style="font-size:0.75rem;color:var(--text-muted);">${message}</span><br>
+                    <span style="font-size:0.75rem;color:var(--text-muted);">Make sure the backend is running: <code>cd chatbot-backend && npm start</code></span>
+                </div>
+            `;
+        }
+
+        function closeAIPanel() {
+            isAIPanelOpen = false;
+            renderCard();
+        }
+
+        // Override renderCard to check AI panel state
+        const originalRenderCard = renderCard;
+        // Redefine renderCard — if AI panel is open, keep it
+        // (we already defined renderCard above, so we patch updateAll)
+        const originalUpdateAll = updateAll;
+        function patchedUpdateAll() {
+            // Update HUD
+            document.getElementById('hud-position').innerText = state.selectedPosition;
+            document.getElementById('hud-ball').innerText = `Ball: ${BALL_ZONES[state.ballZone].label}`;
+
+            // Update Ball Position
+            const ballEl = document.getElementById('the-ball');
+            const ballCoords = BALL_ZONES[state.ballZone];
+            ballEl.style.left = `${ballCoords.x}%`;
+            ballEl.style.top = `${ballCoords.y}%`;
+
+            // Update Player Positions
+            POSITIONS.forEach(pos => {
+                const pEl = document.getElementById(`player-${pos}`);
+                const coords = getPlayerCoords(pos, state.phase, state.ballZone);
+                pEl.style.left = `${coords.x}%`;
+                pEl.style.top = `${coords.y}%`;
+            });
+
+            // Update Opponent Positions
+            POSITIONS.forEach(pos => {
+                const opEl = document.getElementById(`opp-player-${pos}`);
+                const opCoords = getOpponentCoords(pos, state.phase, state.ballZone);
+                opEl.style.left = `${opCoords.x}%`;
+                opEl.style.top = `${opCoords.y}%`;
+            });
+
+            // Hide active ball zone target
+            document.querySelectorAll('.ball-zone-target').forEach(el => el.classList.remove('active'));
+            document.getElementById(`zone-${state.ballZone}`).classList.add('active');
+
+            // Render the right panel
+            if (isAIPanelOpen && aiAnalysisData) {
+                renderAIPanel();
+            } else {
+                renderCard();
+            }
+        }
+        // Replace updateAll
+        updateAll = patchedUpdateAll;
+
+        // Bind AI button
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btn-ai').addEventListener('click', fetchTacticalAnalysis);
+        });
+
+        // Boot
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+
+    <!-- AI Chatbot Widget -->
+    <link rel="stylesheet" href="./chat-widget.css">
+    <script src="./chat-widget.js"
+      data-api-url="http://localhost:3001"
+      data-bot-name="Coach JR"
+      data-accent-color="#f5a623"
+      data-position="top-right"
+      data-welcome-message="Listen up, team! I'm Coach JR. Ask me any questions about our 4-3-3 tactics, positioning, or reading the game."
+      data-theme="dark">
+    </script>
+</body>
+</html>
