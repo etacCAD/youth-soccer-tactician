@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Youth Soccer Positioning Coach",
   "scripts": {
-    "start": "node chatbot-backend/server.js",
+    "start": "cd chatbot-backend && node server.js",
     "build": "cd chatbot-backend && npm install"
   },
   "engines": {
