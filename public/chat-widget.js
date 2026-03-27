@@ -23,7 +23,7 @@
   // ─── Read Config from Script Tag ───────────────────────
   const scriptTag = document.currentScript;
   const CONFIG = {
-    apiUrl: scriptTag?.getAttribute("data-api-url") || "",
+    apiUrl: scriptTag?.hasAttribute("data-api-url") ? scriptTag.getAttribute("data-api-url") : null,
     botName: scriptTag?.getAttribute("data-bot-name") || "AI Assistant",
     accentColor: scriptTag?.getAttribute("data-accent-color") || "#6366f1",
     position: scriptTag?.getAttribute("data-position") || "bottom-right",
@@ -260,7 +260,7 @@
     isStreaming = true;
 
     try {
-      if (CONFIG.apiUrl) {
+      if (CONFIG.apiUrl !== null) {
         await streamResponse(messagesEl, typingEl);
       } else {
         // Demo mode — no API configured

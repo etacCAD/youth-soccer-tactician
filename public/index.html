@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <script>
-        const pw = prompt("Enter password to access Coach JR:");
-        if (pw !== "JRSAYS") {
-            document.documentElement.innerHTML = "<body style='background:#0f1923; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;'><h1>Access Denied</h1></body>";
-            throw new Error("Unauthorized");
-        }
+        // const pw = prompt("Enter password to access Coach JR:");
+        // if (pw !== "JRSAYS") {
+        //     document.documentElement.innerHTML = "<body style='background:#0f1923; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;'><h1>Access Denied</h1></body>";
+        //     throw new Error("Unauthorized");
+        // }
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -1458,8 +1458,8 @@
                         say: "Listen for teammates yelling 'Time', 'Man on', or 'Turn'.",
                         alert: "Don't stare at the ball—keep your head up to see the field."
                     };
-                    if (isDefender) {
-                        text.ready += " If under pressure, passing back to your Goalkeeper to reset is a smart and safe option.";
+                    if (isDefender || pos === 'CDM' || pos === 'LCM' || pos === 'RCM') {
+                        text.ready += " Using the Goalkeeper as a 3rd passing option is smart. It acts as a release valve to draw the opponent's press, pulling their forwards out of position and tiring them out as they chase the game.";
                     }
                     if (pos === 'LW' || pos === 'RW') {
                         text.ready = "Drive at the fullback 1v1! Look to beat them down the line for a cross, or cut inside to shoot.";
@@ -1937,13 +1937,13 @@
             const carrierCoords = getPlayerCoords(carrierPos, state.phase, state.ballZone);
             
             const recommendedPassesMap = {
-                'LCB': ['LB', 'CDM'],
-                'RCB': ['RB', 'CDM'],
-                'LB': ['LW', 'LCM'],
-                'RB': ['RW', 'RCM'],
-                'CDM': ['LCM', 'RCM'],
-                'LCM': ['LW', 'ST'],
-                'RCM': ['RW', 'ST'],
+                'LCB': ['LB', 'CDM', 'GK'],
+                'RCB': ['RB', 'CDM', 'GK'],
+                'LB': ['LW', 'LCM', 'GK'],
+                'RB': ['RW', 'RCM', 'GK'],
+                'CDM': ['LCM', 'RCM', 'GK'],
+                'LCM': ['LW', 'ST', 'GK'],
+                'RCM': ['RW', 'ST', 'GK'],
                 'LW': ['ST', 'LCM'],
                 'RW': ['ST', 'RCM'],
                 'ST': ['LW', 'RW'],
@@ -2003,7 +2003,7 @@
             group.innerHTML = svgHtml;
         }
         // ─── Tactical AI Engine ──────────────────────────────────
-        const AI_API_URL = 'http://localhost:3001';
+        const AI_API_URL = '';
         let aiAnalysisData = null;
         let isAIPanelOpen = false;
 
@@ -2161,7 +2161,7 @@
     <!-- AI Chatbot Widget -->
     <link rel="stylesheet" href="./chat-widget.css">
     <script src="./chat-widget.js"
-      data-api-url="http://localhost:3001"
+      data-api-url=""
       data-bot-name="Coach JR"
       data-accent-color="#f5a623"
       data-position="top-right"
