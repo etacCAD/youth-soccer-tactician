@@ -362,6 +362,33 @@
             display: none; /* Hide the target if ball is already there */
         }
 
+        /* Corner-specific zone targets */
+        .ball-zone-target.corner-zone {
+            width: 34px;
+            height: 34px;
+            border: 2px solid rgba(245, 166, 35, 0.55);
+            border-radius: 50%;
+            background: rgba(245, 166, 35, 0.08);
+        }
+        .ball-zone-target.corner-zone:hover {
+            background: rgba(245, 166, 35, 0.25);
+            border-color: rgba(245, 166, 35, 0.9);
+            transform: translate(-50%, -50%) scale(1.15);
+        }
+        /* Label pip inside corner zone */
+        .ball-zone-target.corner-zone::after {
+            content: 'CK';
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 7px;
+            font-weight: 700;
+            color: rgba(245, 166, 35, 0.85);
+            font-family: var(--font-family);
+        }
+
         .ctrl-btn {
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.2);
@@ -585,6 +612,16 @@
                         <rect x="35" y="144" width="30" height="6" />
                         <path d="M 60 132 A 10 10 0 0 0 40 132" />
                         <circle cx="50" cy="138" r="0.5" fill="var(--field-lines)" />
+
+                        <!-- Corner Arcs (quarter circles, r=3 units) -->
+                        <!-- Top-Left -->
+                        <path d="M 0 3 A 3 3 0 0 1 3 0" stroke="rgba(245,166,35,0.7)" stroke-width="0.7" />
+                        <!-- Top-Right -->
+                        <path d="M 97 0 A 3 3 0 0 1 100 3" stroke="rgba(245,166,35,0.7)" stroke-width="0.7" />
+                        <!-- Bottom-Left -->
+                        <path d="M 3 150 A 3 3 0 0 1 0 147" stroke="rgba(245,166,35,0.7)" stroke-width="0.7" />
+                        <!-- Bottom-Right -->
+                        <path d="M 100 147 A 3 3 0 0 1 97 150" stroke="rgba(245,166,35,0.7)" stroke-width="0.7" />
                     </g>
                 </svg>
 
@@ -622,6 +659,9 @@
     <script>
         const POSITIONS = ['GK', 'LCB', 'RCB', 'LB', 'RB', 'CDM', 'LCM', 'RCM', 'LW', 'ST', 'RW'];
 
+        // Zones whose key starts with 'CORNER-' are treated as corner-kick locations
+        const CORNER_ZONES = new Set(['CORNER-TL', 'CORNER-TR', 'CORNER-BL', 'CORNER-BR']);
+
         const BALL_ZONES = {
             'GK': { x: 50, y: 92, label: 'Goalkeeper' },
             'LCB': { x: 35, y: 75, label: 'Left Center Back' },
@@ -636,7 +676,12 @@
             'RW': { x: 85, y: 25, label: 'Right Winger' },
             'OPP-LB': { x: 85, y: 5, label: 'Opponent Left Back' },
             'OPP-CB': { x: 50, y: 5, label: 'Opponent Center Back' },
-            'OPP-RB': { x: 15, y: 5, label: 'Opponent Right Back' }
+            'OPP-RB': { x: 15, y: 5, label: 'Opponent Right Back' },
+            // Corner spots — always true corner-kick positions
+            'CORNER-TL': { x: 2,  y: 2,  label: 'Corner — Top Left'  },
+            'CORNER-TR': { x: 98, y: 2,  label: 'Corner — Top Right' },
+            'CORNER-BL': { x: 2,  y: 98, label: 'Corner — Bottom Left'  },
+            'CORNER-BR': { x: 98, y: 98, label: 'Corner — Bottom Right' }
         };
 
         const BASE_OFFENSE = {
@@ -783,23 +828,39 @@
             const bz = BALL_ZONES[ballZone];
             const isOffense = phase === 'possession';
             
+            // Detect if ball is at a corner spot — auto corner-kick mode
+            const isCornerBall = CORNER_ZONES.has(ballZone);
+            const effectiveSetPiece = isCornerBall ? 'corner_kick' : state.setPiece;
+
             // Set Piece Override
-            if (state.setPiece !== 'none') {
-                let spBase = state.setPiece === 'corner_kick' ? 
+            if (effectiveSetPiece !== 'none') {
+                let spBase = effectiveSetPiece === 'corner_kick' ? 
                     (isOffense ? BASE_CORNER_OFFENSE[pos] : BASE_CORNER_DEFENSE[pos]) : 
                     (isOffense ? BASE_FREE_KICK_OFFENSE[pos] : BASE_FREE_KICK_DEFENSE[pos]);
                 
                 let newX = spBase.x;
                 let newY = spBase.y;
 
-                if (state.setPiece === 'corner_kick') {
-                    if (isOffense && pos === ballZone) { return { x: bz.x, y: bz.y }; }
-                    // Shift defensive corner shape to ball side
-                    if (!isOffense) {
-                        if (bz.x < 50) newX -= 10;
-                        else newX += 10;
+                if (effectiveSetPiece === 'corner_kick') {
+                    // Player taking the corner snaps to the ball spot
+                    if (isOffense && pos === getClosestFieldPlayer(BASE_CORNER_OFFENSE, bz)) { return { x: bz.x, y: bz.y }; }
+                    // Flip corner attack towards correct end of field
+                    if (isCornerBall) {
+                        // Bottom corners (BL/BR) → attacking our end, so flip Y for offense
+                        if (ballZone === 'CORNER-BL' || ballZone === 'CORNER-BR') {
+                            newY = 100 - newY;
+                        }
+                        // Shift shape to ball side (left/right)
+                        const cornerIsLeft = (ballZone === 'CORNER-TL' || ballZone === 'CORNER-BL');
+                        newX = cornerIsLeft ? newX : 100 - newX;
+                    } else {
+                        // Normal corner side-shift (legacy toggle mode)
+                        if (!isOffense) {
+                            if (bz.x < 50) newX -= 10;
+                            else newX += 10;
+                        }
                     }
-                } else if (state.setPiece === 'free_kick') {
+                } else if (effectiveSetPiece === 'free_kick') {
                     if (isOffense && pos === ballZone) { return { x: bz.x, y: bz.y }; }
                     if (!isOffense) {
                         const distY = bz.y - spBase.y;
@@ -984,9 +1045,13 @@
             const bz = BALL_ZONES[ballZone];
             const isOppDefense = phase === 'possession'; 
             
+            // Detect if ball is at a corner spot — auto corner-kick mode
+            const isCornerBallOpp = CORNER_ZONES.has(ballZone);
+            const effectiveSetPieceOpp = isCornerBallOpp ? 'corner_kick' : state.setPiece;
+
             // Set Piece Override for Opponents
-            if (state.setPiece !== 'none') {
-                let spBase = state.setPiece === 'corner_kick' ? 
+            if (effectiveSetPieceOpp !== 'none') {
+                let spBase = effectiveSetPieceOpp === 'corner_kick' ? 
                     (isOppDefense ? BASE_CORNER_DEFENSE[pos] : BASE_CORNER_OFFENSE[pos]) : 
                     (isOppDefense ? BASE_FREE_KICK_DEFENSE[pos] : BASE_FREE_KICK_OFFENSE[pos]);
                 
@@ -994,13 +1059,20 @@
                 let newX = 100 - spBase.x; 
                 let newY = 100 - spBase.y;
                 
-                if (state.setPiece === 'corner_kick') {
+                if (effectiveSetPieceOpp === 'corner_kick') {
                     if (!isOppDefense && pos === ballZone.replace('OPP-', '')) { return { x: bz.x, y: bz.y }; }
-                    if (isOppDefense) {
+                    if (isCornerBallOpp) {
+                        // Mirror the same corner-end flip used for our team
+                        if (ballZone === 'CORNER-BL' || ballZone === 'CORNER-BR') {
+                            newY = 100 - newY;
+                        }
+                        const cornerIsLeft = (ballZone === 'CORNER-TL' || ballZone === 'CORNER-BL');
+                        newX = cornerIsLeft ? newX : 100 - newX;
+                    } else if (isOppDefense) {
                         if (bz.x < 50) newX -= 10;
                         else newX += 10;
                     }
-                } else if (state.setPiece === 'free_kick') {
+                } else if (effectiveSetPieceOpp === 'free_kick') {
                     if (!isOppDefense && pos === ballZone.replace('OPP-', '')) { return { x: bz.x, y: bz.y }; }
                     if (isOppDefense) {
                         const firstDefender = getClosestFieldPlayer(BASE_FREE_KICK_DEFENSE, bz); // heuristic
@@ -1385,10 +1457,12 @@
             Object.keys(BALL_ZONES).forEach(key => {
                 const z = BALL_ZONES[key];
                 const target = document.createElement('div');
-                target.className = 'ball-zone-target';
+                const isCorner = CORNER_ZONES.has(key);
+                target.className = `ball-zone-target${isCorner ? ' corner-zone' : ''}`;
                 target.id = `zone-${key}`;
                 target.style.left = `${z.x}%`;
                 target.style.top = `${z.y}%`;
+                target.title = z.label; // tooltip on hover
                 target.onclick = () => setBallZone(key);
                 layer.appendChild(target);
             });
