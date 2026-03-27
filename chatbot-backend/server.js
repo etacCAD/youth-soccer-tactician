@@ -198,7 +198,7 @@ app.post("/api/chat/stream", validateChatBody, async (req, res) => {
 // ─── Tactician Endpoint ────────────────────────────────────────
 app.post("/api/tactician", async (req, res) => {
   try {
-    const { phase, ballZone, selectedPosition, hasBall, playerPositions, opponentPositions } = req.body;
+    const { phase, ballZone, selectedPosition, hasBall, setPiece, playerPositions, opponentPositions } = req.body;
 
     if (!phase || !ballZone) {
       return res.status(400).json({
@@ -213,6 +213,7 @@ app.post("/api/tactician", async (req, res) => {
       `- **Ball Location:** ${ballZone}`,
       `- **Selected/Focus Player:** ${selectedPosition || 'RW'}`,
       `- **Selected Player Has Ball:** ${hasBall ? 'Yes' : 'No'}`,
+      `- **Set Piece:** ${setPiece && setPiece !== 'none' ? setPiece.replace('_', ' ').toUpperCase() : 'None (Open Play)'}`,
       ``,
       `## Your Team Player Positions (x=0 is left touchline, x=100 is right touchline, y=0 is opponent goal line, y=100 is own goal line):`,
       ...(playerPositions

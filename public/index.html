@@ -100,6 +100,31 @@
             color: #000;
         }
 
+        .set-piece-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .sp-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--text-muted);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sp-btn.active {
+            background: var(--highlight);
+            color: #000;
+            border-color: var(--highlight);
+            font-weight: 600;
+        }
+
         /* --- Main Layout --- */
         main {
             display: flex;
@@ -521,6 +546,12 @@
         <button class="phase-btn active" data-phase="possession">Offense / In Possession</button>
         <button class="phase-btn" data-phase="defense">Defense / Out of Possession</button>
     </div>
+    
+    <div class="set-piece-toggle">
+        <button class="sp-btn active" data-sp="none">Open Play</button>
+        <button class="sp-btn" data-sp="free_kick">Free Kick</button>
+        <button class="sp-btn" data-sp="corner_kick">Corner Kick</button>
+    </div>
 
     <main>
         <div class="field-container">
@@ -664,8 +695,65 @@
             'RW': { x: 10, y: 75 },
         };
 
+        const BASE_CORNER_OFFENSE = {
+            'GK': { x: 50, y: 85 },
+            'LCB': { x: 45, y: 10 },
+            'RCB': { x: 55, y: 10 },
+            'LB': { x: 30, y: 45 },
+            'RB': { x: 70, y: 45 },
+            'CDM': { x: 50, y: 20 },
+            'LCM': { x: 35, y: 15 },
+            'RCM': { x: 65, y: 15 },
+            'LW': { x: 15, y: 18 }, 
+            'ST': { x: 50, y: 8 },
+            'RW': { x: 85, y: 18 },
+        };
+
+        const BASE_CORNER_DEFENSE = {
+            'GK': { x: 50, y: 96 },
+            'LCB': { x: 45, y: 88 },
+            'RCB': { x: 55, y: 88 },
+            'LB': { x: 35, y: 92 }, 
+            'RB': { x: 65, y: 92 }, 
+            'CDM': { x: 50, y: 80 },
+            'LCM': { x: 40, y: 84 },
+            'RCM': { x: 60, y: 84 },
+            'LW': { x: 30, y: 65 },
+            'ST': { x: 50, y: 55 },
+            'RW': { x: 70, y: 65 },
+        };
+
+        const BASE_FREE_KICK_OFFENSE = {
+            'GK': { x: 50, y: 85 },
+            'LCB': { x: 45, y: 30 },
+            'RCB': { x: 55, y: 30 },
+            'LB': { x: 20, y: 50 },
+            'RB': { x: 80, y: 50 },
+            'CDM': { x: 50, y: 40 },
+            'LCM': { x: 35, y: 35 },
+            'RCM': { x: 65, y: 35 },
+            'LW': { x: 15, y: 25 },
+            'ST': { x: 50, y: 20 },
+            'RW': { x: 85, y: 25 },
+        };
+
+        const BASE_FREE_KICK_DEFENSE = {
+            'GK': { x: 50, y: 96 },
+            'LCB': { x: 45, y: 75 },
+            'RCB': { x: 55, y: 75 },
+            'LB': { x: 25, y: 75 },
+            'RB': { x: 75, y: 75 },
+            'CDM': { x: 50, y: 65 },
+            'LCM': { x: 35, y: 68 },
+            'RCM': { x: 65, y: 68 },
+            'LW': { x: 20, y: 60 },
+            'ST': { x: 50, y: 50 },
+            'RW': { x: 80, y: 60 },
+        };
+
         const state = {
             phase: 'possession',
+            setPiece: 'none',
             ballZone: 'LCB',
             selectedPosition: 'RW',
             sequence: ['LCB'],
@@ -694,6 +782,38 @@
         function getPlayerCoords(pos, phase, ballZone) {
             const bz = BALL_ZONES[ballZone];
             const isOffense = phase === 'possession';
+            
+            // Set Piece Override
+            if (state.setPiece !== 'none') {
+                let spBase = state.setPiece === 'corner_kick' ? 
+                    (isOffense ? BASE_CORNER_OFFENSE[pos] : BASE_CORNER_DEFENSE[pos]) : 
+                    (isOffense ? BASE_FREE_KICK_OFFENSE[pos] : BASE_FREE_KICK_DEFENSE[pos]);
+                
+                let newX = spBase.x;
+                let newY = spBase.y;
+
+                if (state.setPiece === 'corner_kick') {
+                    if (isOffense && pos === ballZone) { return { x: bz.x, y: bz.y }; }
+                    // Shift defensive corner shape to ball side
+                    if (!isOffense) {
+                        if (bz.x < 50) newX -= 10;
+                        else newX += 10;
+                    }
+                } else if (state.setPiece === 'free_kick') {
+                    if (isOffense && pos === ballZone) { return { x: bz.x, y: bz.y }; }
+                    if (!isOffense) {
+                        const distY = bz.y - spBase.y;
+                        if (bz.y < 50) newY += distY * 0.3;
+                        const firstDefender = getClosestFieldPlayer(BASE_FREE_KICK_DEFENSE, bz);
+                        if (pos === firstDefender) { newX = bz.x; newY = bz.y + 10; } // Wall 10 yards away
+                    }
+                }
+                
+                newX = Math.max(2, Math.min(98, newX));
+                newY = Math.max(2, Math.min(98, newY));
+                return { x: newX, y: newY };
+            }
+
             const base = isOffense ? BASE_OFFENSE[pos] : BASE_DEFENSE[pos];
             
             // If ball carrier in offense, or 'hasBall' is checked
@@ -730,7 +850,7 @@
                 }
                 
                 // Keep depth
-                if (pos === 'ST') newY = Math.max(10, bz.y - 15);
+                if (pos === 'ST') newY = Math.min(40, Math.max(10, bz.y - 15)); // ST stays in attacking/midfield third
                 if (pos === 'CDM') newY = Math.min(80, bz.y + 15);
 
                 // Enforce Offside Rule dynamically
@@ -759,9 +879,9 @@
                     newX = bz.x;
                     newY = bz.y + 3; // goal-side of the ball
                 } else if (pos === 'ST') {
-                    // ST drops to cut passing lanes to center
-                    newY = Math.max(40, bz.y + 10);
-                    newX = 50 + (bz.x - 50) * 0.4;
+                    // ST stays in midfield to press and hold as counter-attack reference
+                    newY = Math.min(55, Math.max(40, bz.y - 5));
+                    newX = 50 + (bz.x - 50) * 0.3;
                 } else if (pos === 'LW' || pos === 'RW') {
                     // Wingers drop into a dense midfield block
                     newY = 60 + shiftY;
@@ -821,6 +941,36 @@
         function getOpponentCoords(pos, phase, ballZone) {
             const bz = BALL_ZONES[ballZone];
             const isOppDefense = phase === 'possession'; 
+            
+            // Set Piece Override for Opponents
+            if (state.setPiece !== 'none') {
+                let spBase = state.setPiece === 'corner_kick' ? 
+                    (isOppDefense ? BASE_CORNER_DEFENSE[pos] : BASE_CORNER_OFFENSE[pos]) : 
+                    (isOppDefense ? BASE_FREE_KICK_DEFENSE[pos] : BASE_FREE_KICK_OFFENSE[pos]);
+                
+                // Opponents are mirrored
+                let newX = 100 - spBase.x; 
+                let newY = 100 - spBase.y;
+                
+                if (state.setPiece === 'corner_kick') {
+                    if (!isOppDefense && pos === ballZone.replace('OPP-', '')) { return { x: bz.x, y: bz.y }; }
+                    if (isOppDefense) {
+                        if (bz.x < 50) newX -= 10;
+                        else newX += 10;
+                    }
+                } else if (state.setPiece === 'free_kick') {
+                    if (!isOppDefense && pos === ballZone.replace('OPP-', '')) { return { x: bz.x, y: bz.y }; }
+                    if (isOppDefense) {
+                        const firstDefender = getClosestFieldPlayer(BASE_FREE_KICK_DEFENSE, bz); // heuristic
+                        if (pos === firstDefender) { newX = bz.x; newY = Math.max(0, bz.y - 10); } // Wall 10 yards away
+                    }
+                }
+                
+                newX = Math.max(5, Math.min(95, newX));
+                newY = Math.max(2, Math.min(98, newY));
+                return { x: newX, y: newY };
+            }
+
             const base = isOppDefense ? BASE_OPP_DEFENSE[pos] : BASE_OPP_OFFENSE[pos];
             
             let newX = base.x;
@@ -1228,6 +1378,15 @@
                 };
             });
             
+            document.querySelectorAll('.sp-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    document.querySelectorAll('.sp-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    state.setPiece = e.target.dataset.sp;
+                    updateAll();
+                };
+            });
+            
             document.getElementById('toggle-has-ball').onchange = (e) => {
                 state.hasBall = e.target.checked;
                 updateAll();
@@ -1453,6 +1612,7 @@
 
             return {
                 phase: state.phase,
+                setPiece: state.setPiece,
                 ballZone: state.ballZone,
                 selectedPosition: state.selectedPosition,
                 hasBall: state.hasBall,

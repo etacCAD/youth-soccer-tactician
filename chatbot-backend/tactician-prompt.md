@@ -68,3 +68,9 @@ GK, LCB, RCB, LB, RB, CDM, LCM, RCM, LW, ST, RW
 - Cut central passing lanes, force opponent wide
 - First 5 seconds after losing ball are critical — press or drop immediately
 - Recovery runs: sprint goal-side, never ball-watch
+
+**Set Pieces (Corner Kicks & Free Kicks):**
+- **Offensive Corners**: Pack the box. Deliver in-swinging or out-swinging balls into the 6-yard or penalty spot. Keep players on the edge of the box to recycle clearances.
+- **Defensive Corners**: Mark tightly (man-to-man or zonal). Position players on the posts if needed. Be ready to sprint out and counter-attack immediately when the ball is cleared.
+- **Offensive Free Kicks**: If in range, shooting option is primary. If crossing, form tactical runs to disrupt the defensive wall/line.
+- **Defensive Free Kicks**: Build a solid wall based on the ball's angle (usually 3-4 players). The goalkeeper is responsible for positioning the wall. Hold a high line to trap attackers offside.
