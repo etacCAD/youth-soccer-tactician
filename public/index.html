@@ -66,26 +66,15 @@
             flex-shrink: 0;
         }
 
-        /* Control toggles: overlay strip on top of the field on mobile */
+        /* Control toggles: compact bar above the field */
         .controls-overlay {
-            position: absolute;
-            top: 6px;
-            left: 6px;
-            right: 6px;
-            z-index: 20;
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
+            justify-content: center;
             align-items: center;
-            gap: 4px;
-            pointer-events: none;
-        }
-        .controls-overlay > * { pointer-events: all; }
-
-        @media (min-width: 768px) {
-            .controls-overlay {
-                position: static;
-                margin-bottom: 8px;
-            }
+            gap: 6px;
+            padding: 4px 6px;
+            flex-shrink: 0;
         }
 
         h1 {
@@ -170,10 +159,10 @@
 
         /* --- Field Area --- */
         .field-container {
-            flex: 3; /* ~75% of remaining height on mobile */
+            flex: 3;
             display: flex;
             flex-direction: column;
-            padding: 6px;
+            padding: 0 6px 6px;
             position: relative;
             min-height: 0;
         }
