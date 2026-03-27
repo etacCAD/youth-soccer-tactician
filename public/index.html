@@ -631,7 +631,7 @@
             'CDM': { x: 50, y: 55, label: 'Holding Mid' },
             'LCM': { x: 35, y: 40, label: 'Left Mid' },
             'RCM': { x: 65, y: 40, label: 'Right Mid' },
-            'LW': { x: 15, y: 25, label: 'Left Winger' },
+            'LW': { x: 22, y: 25, label: 'Left Winger' },
             'ST': { x: 50, y: 20, label: 'Striker' },
             'RW': { x: 85, y: 25, label: 'Right Winger' },
             'OPP-LB': { x: 85, y: 5, label: 'Opponent Left Back' },
@@ -648,7 +648,7 @@
             'CDM': { x: 50, y: 58 },
             'LCM': { x: 35, y: 40 },
             'RCM': { x: 65, y: 40 },
-            'LW': { x: 10, y: 20 },
+            'LW': { x: 22, y: 20 },
             'ST': { x: 50, y: 15 },
             'RW': { x: 90, y: 20 },
         };
@@ -845,8 +845,43 @@
                     } else {
                         newX += distToBallX * 0.1;
                     }
-                } else {
+                } else if (!pos.includes('B')) {
+                    // Midfielders and strikers shift to ball side heavily, but Defenders (Backs) keep distance
                     newX += distToBallX * 0.2;
+                } else {
+                    // Fullbacks and CBs shift gently to ball side
+                    newX += distToBallX * 0.1;
+                }
+                
+                // Create passing angles for close support players
+                const dxCurrent = newX - bz.x;
+                const dyCurrent = newY - bz.y;
+                const currentDistSq = dxCurrent*dxCurrent + dyCurrent*dyCurrent;
+                
+                // If extremely close to ball carrier (under ~12 yards), push away to create space
+                if (currentDistSq > 0 && currentDistSq < 144) {
+                    const dist = Math.sqrt(currentDistSq);
+                    const pushFactor = (12 - dist) / dist;
+                    newX += dxCurrent * pushFactor;
+                    newY += dyCurrent * pushFactor;
+                }
+                
+                // If within ~30 units, create diagonals
+                if (currentDistSq > 0 && currentDistSq < 900) { 
+                    const dx = newX - bz.x;
+                    const dy = newY - bz.y;
+                    
+                    if (Math.abs(dx) < 8 && Math.abs(dy) > 5) {
+                        // Too vertical, stagger horizontally
+                        newX += (base.x > 50 ? 12 : -12);
+                    } else if (Math.abs(dy) < 8 && Math.abs(dx) > 5) {
+                        // Too horizontal, drop defensively or push up offensively
+                        if (pos.includes('B') || pos === 'CDM') {
+                            newY += 12; // Backs drop to offer safe pass
+                        } else {
+                            newY -= 12; // Attackers push higher
+                        }
+                    }
                 }
                 
                 // Keep depth
@@ -857,6 +892,13 @@
                 // Simulate opponent offside line: matched to their High Line formula
                 const offsideLine = Math.min(45, bz.y - 15);
                 
+                // Forwards push up to pin the defensive line if it drops back
+                if (pos === 'ST' || pos === 'LW' || pos === 'RW') {
+                    if (newY > offsideLine + 8) {
+                        newY = offsideLine + 2; 
+                    }
+                }
+
                 if (newY < offsideLine) {
                     newY = offsideLine;
                     // Slight stagger so wingers and ST don't perfectly overlap horizontally
@@ -1113,6 +1155,12 @@
                     }
                 }
 
+                if (bz.y < 35) {
+                    text.alert = "You are close to the opposition net. Taking risks to create a scoring chance is acceptable here!";
+                } else if (!isDefender) {
+                    text.alert = "Passing back to a wide open teammate is a great idea vs losing possession. Prioritize keeping the ball!";
+                }
+
                 return text;
             }
 
@@ -1139,6 +1187,13 @@
                             text.ready = "Look to deliver an early cross into the box or play your winger down the line.";
                         }
                     }
+
+                    if (bz.y < 35) {
+                        text.alert = "You are close to the opposition net. Taking risks to create a scoring chance is acceptable here!";
+                    } else if (!isDefender) {
+                        text.alert = "Passing back to a wide open teammate is a great idea vs losing possession. Prioritize keeping the ball!";
+                    }
+
                     return text;
                 }
 
@@ -1456,20 +1511,61 @@
             ballEl.style.left = `${ballCoords.x}%`;
             ballEl.style.top = `${ballCoords.y}%`;
 
-            // Update Player Positions
-            POSITIONS.forEach(pos => {
-                const pEl = document.getElementById(`player-${pos}`);
-                const coords = getPlayerCoords(pos, state.phase, state.ballZone);
-                pEl.style.left = `${coords.x}%`;
-                pEl.style.top = `${coords.y}%`;
+            // Update Player Positions (Calculated)
+            const ourCoords = POSITIONS.map(pos => {
+                const c = getPlayerCoords(pos, state.phase, state.ballZone);
+                return { pos, c, el: document.getElementById(`player-${pos}`) };
             });
 
-            // Update Opponent Positions
-            POSITIONS.forEach(pos => {
-                const opEl = document.getElementById(`opp-player-${pos}`);
-                const opCoords = getOpponentCoords(pos, state.phase, state.ballZone);
-                opEl.style.left = `${opCoords.x}%`;
-                opEl.style.top = `${opCoords.y}%`;
+            // Update Opponent Positions (Calculated)
+            const oppCoords = POSITIONS.map(pos => {
+                const c = getOpponentCoords(pos, state.phase, state.ballZone);
+                return { pos, c, el: document.getElementById(`opp-player-${pos}`) };
+            });
+
+            // Repulsion to prevent overlapping (2 iterations)
+            for (let iter = 0; iter < 2; iter++) {
+                for(let i=0; i<ourCoords.length; i++) {
+                    for(let j=i+1; j<ourCoords.length; j++) {
+                        let p1 = ourCoords[i].c; let p2 = ourCoords[j].c;
+                        let dx = p1.x - p2.x; let dy = p1.y - p2.y;
+                        if(dx*dx + dy*dy < 16) {
+                            if(dx===0 && dy===0) { dx = Math.random()-0.5; dy = Math.random()-0.5; }
+                            let dist = Math.sqrt(dx*dx + dy*dy);
+                            p1.x += (dx/dist)*2; p1.y += (dy/dist)*2;
+                            p2.x -= (dx/dist)*2; p2.y -= (dy/dist)*2;
+                        }
+                    }
+                }
+                for(let i=0; i<oppCoords.length; i++) {
+                    for(let j=i+1; j<oppCoords.length; j++) {
+                        let p1 = oppCoords[i].c; let p2 = oppCoords[j].c;
+                        let dx = p1.x - p2.x; let dy = p1.y - p2.y;
+                        if(dx*dx + dy*dy < 16) {
+                            if(dx===0 && dy===0) { dx = Math.random()-0.5; dy = Math.random()-0.5; }
+                            let dist = Math.sqrt(dx*dx + dy*dy);
+                            p1.x += (dx/dist)*2; p1.y += (dy/dist)*2;
+                            p2.x -= (dx/dist)*2; p2.y -= (dy/dist)*2;
+                        }
+                    }
+                }
+            }
+
+            // Apply separated coords
+            ourCoords.forEach(item => {
+                let {x, y} = item.c;
+                x = Math.max(2, Math.min(98, x));
+                y = Math.max(2, Math.min(98, y));
+                item.el.style.left = `${x}%`;
+                item.el.style.top = `${y}%`;
+            });
+
+            oppCoords.forEach(item => {
+                let {x, y} = item.c;
+                x = Math.max(5, Math.min(95, x));
+                y = Math.max(2, Math.min(98, y));
+                item.el.style.left = `${x}%`;
+                item.el.style.top = `${y}%`;
             });
 
             // Hide active ball zone target
