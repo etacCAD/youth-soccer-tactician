@@ -1463,55 +1463,49 @@
             }
 
             if (isOppDefense) {
-                // Opponent is defending (trying to stop us) - compact shape
-                let shiftY = (bz.y - 50) * 0.2; 
+                // Opponent is defending (trying to stop us) - Hybrid Zonal + Pressing System
+                const teamShiftX = (bz.x - 50) * 0.4; // Max shift is ~20 units to match ball location
+                const compactX = 50 + (base.x - 50) * 0.7; // Compress defensive width by 30%
+
+                // Calculate Line Depths (Y)
+                let oppHighLineY = Math.min(45, Math.max(8, bz.y - 12)); 
+                let midLineY = oppHighLineY + 12; // Maintain ~12 yards between lines
+                let fwdLineY = midLineY + 14;
+
                 const firstDefender = getClosestFieldPlayer(BASE_OPP_DEFENSE, bz);
 
                 if (pos === firstDefender) {
                     // First defender aggressively steps to pressure the ball
                     newX = bz.x;
-                    newY = bz.y - 3; // goal-side (their goal is y=0)
+                    newY = Math.max(4, bz.y - 3); // Goal-side
                 } else {
-                    const isLeft = base.x < 50;
-                    const isRight = base.x > 50;
-                    const isBallLeft = bz.x < 50;
-                    const isBallRight = bz.x > 50;
-                    const isBallSide = (isLeft && isBallLeft) || (isRight && isBallRight);
+                    // Maintain cohesive block shape
+                    newX = compactX + teamShiftX;
 
-                    // Structured drop
                     if (pos === 'ST') {
-                        newY = Math.min(60, bz.y - 10);
-                        newX = 50 + (bz.x - 50) * 0.4;
+                        newY = fwdLineY;
                     } else if (pos === 'LW' || pos === 'RW' || pos === 'LCM' || pos === 'RCM' || pos === 'CDM') {
-                        newY += shiftY;
-                        if (isBallSide) {
-                            newX += (bz.x - base.x) * 0.5;
-                            newY += 2; // step towards coverage
-                        } else {
-                            newX = pos.includes('L') ? 40 : 60; // tuck in tightly
-                            newY -= 3; // drop deeper
-                        }
-
-                        // If beaten (they are higher than the ball + buffer), force recovery
-                        if (newY > bz.y + 15) newY = bz.y + 15;
+                        // Midfield line, maintain internal stagger (e.g. CDM sits slightly deeper)
+                        newY = midLineY + (base.y - 40) * 0.8; 
                     } else if (pos === 'LB' || pos === 'RB' || pos === 'LCB' || pos === 'RCB') {
-                        // Opponent Backline plays a High Line (Offside Trap)
-                        let oppHighLineY = Math.min(45, bz.y - 15);
                         newY = oppHighLineY;
-                        // Cap depth so they don't enter their own goal
-                        newY = Math.max(8, newY);
-
-                        if (pos === 'LB' || pos === 'RB') {
-                            if (isBallSide) {
-                                newX += (bz.x - base.x) * 0.5;
-                                newY += 2; // step to cover
-                            } else {
-                                newX = pos === 'LB' ? 40 : 60; // tuck inside to defend box
-                                newY -= 3; // drop to backline depth
-                            }
-                        } else {
-                            newX = base.x + (bz.x - 50) * 0.4; // CBs strictly shift with center
+                        
+                        // Extra tucking for weak-side fullback to cover center
+                        const isLeft = base.x > 50; 
+                        const isRight = base.x < 50;
+                        const isBallLeft = bz.x > 60;
+                        const isBallRight = bz.x < 40;
+                        
+                        if (isBallRight && isLeft && pos === 'LB') {
+                            newX -= 8; // Slide closer to LCB
+                        } else if (isBallLeft && isRight && pos === 'RB') {
+                            newX += 8; // Slide closer to RCB
                         }
+                    }
+
+                    // Recovery runs: if beaten, aggressively drop to recover position
+                    if (newY > bz.y + 10) {
+                        newY = bz.y + 10;
                     }
                 }
             } else {
